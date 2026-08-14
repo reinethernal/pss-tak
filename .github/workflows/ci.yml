@@ -107,7 +107,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq apksigner aapt libmagic1
-          pip install "fdroidserver==2.4.4"
+          pip install "fdroidserver==2.4.4" "androguard==4.0.2"
           # aapt from SDK is more reliable for AGP 8+ APKs than androguard alone
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "build-tools;35.0.0"
@@ -155,6 +155,7 @@ jobs:
           repo_description: Полевой репозиторий ПСР (PSS TAK + OpenTAK ICU) для fts.plasmadancer.ru
           archive_older: 0
           make_current_version_link: false
+          repo_icon: icon.png
           sdk_path: {sdk}
           keystore: keystore.jks
           repo_keyalias: {os.environ['FDROID_REPO_KEY_ALIAS']}
