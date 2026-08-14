@@ -199,6 +199,7 @@ jobs:
           mkdir -p _site/fdroid
           cp -a fdroid/repo _site/fdroid/repo
           cp fdroid/site/index.html _site/index.html
+          cp fdroid/site/repo-qr.png _site/repo-qr.png
           # also expose README
           cp fdroid/README.md _site/fdroid/README.md || true
 
