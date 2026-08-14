@@ -15,11 +15,15 @@ JDK 17, Android SDK (platform 35), желательно NDK `28.2.13676358`.
 
 ## CI
 
-На **каждый push** в любую ветку GitHub Actions собирает debug APK и кладёт его в **Artifacts** workflow run.
+На **каждый push** в любую ветку GitHub Actions (workflow `CI`):
 
-Ручной запуск: Actions → Build APK → Run workflow.
+1. Собирает debug APK  
+2. Кладёт его в **Artifacts** (хранить 14 дней)  
+3. Гоняет unit-тесты  
 
-Теги `v*` дополнительно публикуют APK в GitHub Release.
+Ручной запуск: Actions → CI → Run workflow.  
+Теги дополнительно публикуют APK в GitHub Release.
+
 
 ## F-Droid
 
