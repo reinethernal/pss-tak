@@ -1,0 +1,268 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css" rel="stylesheet" integrity="sha384-ghEeMdcWWzRv/BPeUcX835vcKDGrxvROXisl/Btpv3GeekBUXTSPVcFJpI1Tcrgp">
+<style>
+  /* Android WebView (after loadDataWithBaseURL) resolves 100%/100vh to 0,
+     so size the canvas in pixels via _fitViewport. */
+  html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  #cesiumContainer{position:fixed;top:0;left:0}
+  #loading{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(-50%);z-index:10;pointer-events:none}
+  .dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#FFCC00;margin:0 4px;animation:p 1.4s infinite}
+  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+  @keyframes p{0%,80%,100%{opacity:.3}40%{opacity:1}}
+  .label{margin-top:16px;font-size:14px;opacity:.7}
+  .cesium-viewer-bottom{display:none!important}
+</style></head><body>
+<div id="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="label">Loading 3D world…</div></div>
+<div id="cesiumContainer"></div>
+<!-- Subresource Integrity pins on every remote script/style: the WebView
+     refuses to execute a swapped artifact (CDN / BGP-level tamper) inside a
+     scene that receives operator + contact positions over OmniBridge.
+     cesium.com resources are same-origin with the page (loadDataWithBaseURL
+     uses https://cesium.com/ as base) so no crossorigin attr; unpkg sends
+     Access-Control-Allow-Origin:* so milsymbol uses crossorigin=anonymous.
+     Residual risk: Cesium.js fetches its own Workers/Assets from the same
+     CDN at runtime — those can't carry SRI. Vendoring the full Cesium build
+     (~70 MB with Workers/Assets) was rejected for APK size. -->
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js" integrity="sha384-5oazsHA45lZs9jgvxUv40qbMATfjwmtR/wQePfqDAeIDIhGmSK2V0gpRoCpZVBzJ"></script>
+<script src="https://unpkg.com/milsymbol@2.2.0/dist/milsymbol.js" integrity="sha384-nBeSn7MTFykY3q7Irc8DaMFNJsqvJE1xMmD74ebMBp8ZK6QTtcooJ6Yb8+62w8ur" crossorigin="anonymous"></script>
+<script>
+  // Injected at WebView load time by CesiumMapView from BuildConfig.CESIUM_ION_TOKEN
+  // (fed by gitignored local.properties) — never commit a literal token here.
+  Cesium.Ion.defaultAccessToken='__CESIUM_ION_TOKEN__';
+  const _state={ready:false,viewer:null,entities:new Map(),drawings:new Map(),billboardCache:new Map(),northLocked:false,northEnforcer:null};
+  function _drawColor(hex,a){try{const c=Cesium.Color.fromCssColorString(hex||'#4ADE80');return a!==undefined?c.withAlpha(a):c}catch(e){return Cesium.Color.CYAN}}
+  function _havDist(a,b){const R=6371000,lat1=a[1]*Math.PI/180,lat2=b[1]*Math.PI/180,dLat=(b[1]-a[1])*Math.PI/180,dLon=(b[0]-a[0])*Math.PI/180;const s=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(s)))}
+  function _fitViewport(){
+    const w=window.innerWidth,h=window.innerHeight;
+    document.body.style.width=w+'px';document.body.style.height=h+'px';
+    const c=document.getElementById('cesiumContainer');
+    if(c){c.style.width=w+'px';c.style.height=h+'px';}
+    if(_state.viewer){_state.viewer.resize();_state.viewer.scene.requestRender();}
+  }
+  window.addEventListener('resize',_fitViewport);
+  document.addEventListener('DOMContentLoaded',_fitViewport);
+  function _color(a){return a==='f'?'#4ADE80':a==='h'?'#F44336':a==='n'?'#FFC107':'#B39DDB'}
+  // #98 — ATAK Spot Map dot. When an entity carries a `spot` hex colour (from a
+  // <usericon iconsetpath="COT_MAPPING_SPOTMAP/…"> marker) render a filled,
+  // outlined dot instead of the MIL-STD glyph, matching the 2D MapLibre +
+  // native picker rendering so the globe stays in parity.
+  function _spotDot(hex){const sk='spot|'+hex;if(_state.billboardCache.has(sk))return _state.billboardCache.get(sk);
+    const c=document.createElement('canvas');c.width=56;c.height=56;const ctx=c.getContext('2d');
+    ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;ctx.fillStyle=hex;ctx.beginPath();ctx.arc(28,28,18,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;const lum=_luma(hex);ctx.lineWidth=3;ctx.strokeStyle=lum>0.6?'#000':'#fff';ctx.beginPath();ctx.arc(28,28,18,0,Math.PI*2);ctx.stroke();
+    const url=c.toDataURL('image/png');_state.billboardCache.set(sk,url);return url;}
+  function _luma(hex){const h=hex.replace('#','');if(h.length<6)return 1;const r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;return 0.299*r+0.587*g+0.114*b;}
+  // #83 — triangle self-marker glyph, parity with the 2D puck's triangle
+  // style. Points "up" (toward 0/north in the bitmap); the billboard is then
+  // rotated by the device heading (e.heading) just like the 2D RenderMode.
+  // COMPASS puck, so the apex tracks where the operator faces.
+  function _selfTriangle(){const sk='selftri';if(_state.billboardCache.has(sk))return _state.billboardCache.get(sk);
+    const c=document.createElement('canvas');c.width=56;c.height=56;const ctx=c.getContext('2d');
+    const color=_color('f');ctx.lineWidth=4;ctx.strokeStyle=color;ctx.fillStyle=color+'88';
+    ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;
+    ctx.beginPath();ctx.moveTo(28,6);ctx.lineTo(48,50);ctx.lineTo(28,40);ctx.lineTo(8,50);ctx.closePath();ctx.fill();ctx.stroke();
+    const url=c.toDataURL('image/png');_state.billboardCache.set(sk,url);return url;}
+  function _billboard(a,k,sidc,spot,icon,triangle){
+    // #83 — operator's own triangle self-marker beats every other glyph
+    // branch when the triangle style pref is on.
+    if(triangle){return _selfTriangle();}
+    // #98 — a pre-rendered TAK icon-suite badge (Markers / Google) arrives as a
+    // ready data-URL from the Kotlin side, the same bitmap the 2D map registers,
+    // so the globe matches it byte-for-byte without re-drawing the glyph here.
+    if(icon&&k!=='aircraft'){return icon;}
+    if(spot&&k!=='aircraft'){return _spotDot(spot);}
+    if(sidc&&window.ms&&k!=='aircraft'){const sk='sidc|'+sidc;if(_state.billboardCache.has(sk))return _state.billboardCache.get(sk);
+      try{const sym=new window.ms.Symbol(sidc,{size:32,infoBackground:'transparent',infoColor:'white'});const url=sym.asCanvas().toDataURL('image/png');_state.billboardCache.set(sk,url);return url;}catch(e){console.warn('milsymbol failed for',sidc,e);}}
+    const key=a+'|'+(k||'');if(_state.billboardCache.has(key))return _state.billboardCache.get(key);
+    const c=document.createElement('canvas');c.width=56;c.height=56;const ctx=c.getContext('2d');
+    const color=_color(a);ctx.lineWidth=4;ctx.strokeStyle=color;ctx.fillStyle=color+'55';
+    if(k==='aircraft'){ctx.beginPath();ctx.moveTo(28,6);ctx.lineTo(46,48);ctx.lineTo(28,38);ctx.lineTo(10,48);ctx.closePath();ctx.fill();ctx.stroke();}
+    else if(a==='f'){ctx.beginPath();ctx.arc(28,28,22,0,Math.PI*2);ctx.fill();ctx.stroke();}
+    else if(a==='h'){ctx.beginPath();ctx.moveTo(28,4);ctx.lineTo(52,28);ctx.lineTo(28,52);ctx.lineTo(4,28);ctx.closePath();ctx.fill();ctx.stroke();}
+    else if(a==='n'){ctx.fillRect(8,8,40,40);ctx.strokeRect(8,8,40,40);}
+    else{ctx.beginPath();ctx.arc(20,28,10,0,Math.PI*2);ctx.arc(36,28,10,0,Math.PI*2);ctx.arc(28,20,10,0,Math.PI*2);ctx.arc(28,36,10,0,Math.PI*2);ctx.fill();ctx.stroke();}
+    if(k!=='aircraft'){ctx.fillStyle=color;ctx.beginPath();ctx.arc(28,28,3,0,Math.PI*2);ctx.fill();}
+    const url=c.toDataURL('image/png');_state.billboardCache.set(key,url);return url;
+  }
+  function _parse(x){return typeof x==='string'?(()=>{try{return JSON.parse(x)}catch(e){return null}})():x}
+  function _hideLoading(){const el=document.getElementById('loading');if(el)el.style.display='none';}
+  function _signalReady(){
+    _state.ready=true;_hideLoading();
+    try{if(window.OmniBridgeNative&&window.OmniBridgeNative.onReady)window.OmniBridgeNative.onReady()}catch(e){}
+  }
+  function _postMapEvent(p){const j=JSON.stringify(p);
+    try{if(window.OmniBridgeNative&&window.OmniBridgeNative.onMapEvent)window.OmniBridgeNative.onMapEvent(j)}catch(e){}
+  }
+  function _pickedUid(viewer,pos){const p=viewer.scene.pick(pos);return(p&&p.id&&typeof p.id.id==='string')?p.id.id:null}
+  function _cartoFor(viewer,pos){let c=viewer.scene.pickPosition(pos);if(!Cesium.defined(c))c=viewer.camera.pickEllipsoid(pos,viewer.scene.globe.ellipsoid);if(!Cesium.defined(c))return null;const cc=Cesium.Cartographic.fromCartesian(c);return{lat:Cesium.Math.toDegrees(cc.latitude),lon:Cesium.Math.toDegrees(cc.longitude),hae:cc.height}}
+  function _zoomFromHeight(h,latRad){const c=Math.max(Math.cos(latRad||0),0.01),mpp=(h*256)/1000.0,z=Math.log2(40075017*c/Math.max(mpp,1));return Math.max(0,Math.min(22,z))}
+  function _postCameraChanged(v){const cam=v.camera,carto=cam.positionCartographic;if(!carto)return;
+    _postMapEvent({event:'camerachanged',lat:Cesium.Math.toDegrees(carto.latitude),lon:Cesium.Math.toDegrees(carto.longitude),height:carto.height,heading:Cesium.Math.toDegrees(cam.heading),pitch:Cesium.Math.toDegrees(cam.pitch),zoom:_zoomFromHeight(carto.height,carto.latitude)})}
+  // Toolbar zoom — move the camera along its view axis by the change in
+  // height (factor<1 zooms in, >1 zooms out). Mirrors the iOS zoomBy so the
+  // +/- buttons drive the globe the same on both platforms.
+  function _zoomBy(factor){const v=_state.viewer;if(!v)return;const f=(typeof factor==='number'&&factor>0)?factor:1;
+    const h=v.camera.positionCartographic.height;const amount=Math.abs(h-h*f);if(amount<1)return;
+    if(f<1)v.camera.zoomIn(amount);else v.camera.zoomOut(amount);_postCameraChanged(v);}
+  // Issue #95 — re-pose the camera to heading 0 (north-up) about the ground
+  // point it is currently centred on, keeping pitch and camera-to-ground
+  // range so only the bearing changes. Picks the globe point at screen centre
+  // (falls back to the camera's sub-point) and orbits via lookAt at heading 0,
+  // then releases the lookAt transform so free pan/zoom still works after.
+  function _headingToNorth(v,animate){if(!v)return;
+    const scene=v.scene,canvas=scene.canvas;
+    const centre=new Cesium.Cartesian2(canvas.clientWidth/2,canvas.clientHeight/2);
+    let ground=scene.pickPosition?scene.pickPosition(centre):undefined;
+    if(!Cesium.defined(ground))ground=v.camera.pickEllipsoid(centre,scene.globe.ellipsoid);
+    if(!Cesium.defined(ground)){
+      // No globe under screen centre (limb / space view) — fall back to the
+      // camera's own sub-point so we still zero the heading.
+      const carto=v.camera.positionCartographic;
+      ground=Cesium.Cartesian3.fromRadians(carto.longitude,carto.latitude,0);
+    }
+    let range=Cesium.Cartesian3.distance(v.camera.positionWC,ground);
+    if(!isFinite(range)||range<=0)range=v.camera.positionCartographic.height||5000;
+    const pitch=v.camera.pitch;
+    if(animate){
+      // Compute the north-up destination via a throwaway camera, then fly to
+      // it so the snap is smooth and matches the 2D engine's animated snap.
+      v.camera.flyToBoundingSphere(new Cesium.BoundingSphere(ground,1),{
+        offset:new Cesium.HeadingPitchRange(0,pitch,range),duration:0.45,
+        complete:function(){_postCameraChanged(v);}});
+    }else{
+      v.camera.lookAt(ground,new Cesium.HeadingPitchRange(0,pitch,range));
+      v.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+      _postCameraChanged(v);
+    }
+  }
+  function _installInputHandlers(viewer){
+    viewer.camera.moveEnd.addEventListener(function(){_postCameraChanged(viewer)});
+    const h=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    h.setInputAction(function(click){const p=_cartoFor(viewer,click.position);if(!p)return;_postMapEvent({event:'tap',lat:p.lat,lon:p.lon,hae:p.hae,screenX:click.position.x,screenY:click.position.y,uid:_pickedUid(viewer,click.position)})},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    let pressTimer=null,pressStart=null;
+    h.setInputAction(function(down){pressStart=down.position;if(pressTimer)clearTimeout(pressTimer);pressTimer=setTimeout(function(){if(!pressStart)return;const p=_cartoFor(viewer,pressStart);if(!p)return;_postMapEvent({event:'longpress',lat:p.lat,lon:p.lon,hae:p.hae,screenX:pressStart.x,screenY:pressStart.y,uid:_pickedUid(viewer,pressStart)});pressStart=null},500)},Cesium.ScreenSpaceEventType.LEFT_DOWN);
+    h.setInputAction(function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null}pressStart=null},Cesium.ScreenSpaceEventType.LEFT_UP);
+    h.setInputAction(function(m){if(!pressStart)return;const dx=m.endPosition.x-pressStart.x,dy=m.endPosition.y-pressStart.y;if(Math.hypot(dx,dy)>8&&pressTimer){clearTimeout(pressTimer);pressTimer=null;pressStart=null}},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+  }
+  window.OmniBridge={
+    upsertEntity(arg){const e=_parse(arg);if(!e||!e.uid||typeof e.lat!=='number'||typeof e.lon!=='number')return;const v=_state.viewer;if(!v)return;
+      const hae=(typeof e.hae==='number'&&isFinite(e.hae))?e.hae:0;const useGround=hae===0;
+      const pos=Cesium.Cartesian3.fromDegrees(e.lon,e.lat,hae);
+      const rot=(typeof e.heading==='number')?-e.heading*Math.PI/180:0;
+      let entity=_state.entities.get(e.uid);
+      if(!entity){entity=v.entities.add({id:e.uid,position:pos,
+        billboard:{image:_billboard(e.affiliation||'u',e.kind,e.sidc,e.spot,e.icon,e.triangle),verticalOrigin:Cesium.VerticalOrigin.CENTER,heightReference:useGround?Cesium.HeightReference.CLAMP_TO_GROUND:Cesium.HeightReference.NONE,disableDepthTestDistance:Number.POSITIVE_INFINITY,scale:e.kind==='aircraft'?1.5:0.7,rotation:rot},
+        label:e.callsign?{text:e.callsign,font:'12px -apple-system, sans-serif',fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-32),heightReference:useGround?Cesium.HeightReference.CLAMP_TO_GROUND:Cesium.HeightReference.NONE,disableDepthTestDistance:Number.POSITIVE_INFINITY}:undefined,
+      });_state.entities.set(e.uid,entity);}
+      else{entity.position=pos;entity.billboard.image=_billboard(e.affiliation||'u',e.kind,e.sidc,e.spot,e.icon,e.triangle);entity.billboard.heightReference=useGround?Cesium.HeightReference.CLAMP_TO_GROUND:Cesium.HeightReference.NONE;entity.billboard.rotation=rot;if(entity.label&&e.callsign)entity.label.text=e.callsign;}
+    },
+    setEntities(arg){const list=_parse(arg);if(!Array.isArray(list))return;const seen=new Set();
+      for(const e of list){if(e&&e.uid){seen.add(e.uid);window.OmniBridge.upsertEntity(e);}}
+      for(const uid of Array.from(_state.entities.keys()))if(!seen.has(uid))window.OmniBridge.removeEntity(uid);
+    },
+    removeEntity(uid){const v=_state.viewer;if(!v)return;const e=_state.entities.get(uid);if(e){v.entities.remove(e);_state.entities.delete(uid);}},
+    removeAll(){const v=_state.viewer;if(!v)return;v.entities.removeAll();_state.entities.clear();_state.drawings.clear();},
+    flyTo(arg){const e=_parse(arg);if(!e)return;const v=_state.viewer;if(!v)return;
+      v.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(e.lon,e.lat,(typeof e.range==='number')?e.range:5000),
+        orientation:{heading:Cesium.Math.toRadians(e.heading||0),pitch:Cesium.Math.toRadians(typeof e.pitch==='number'?e.pitch:-30),roll:0},duration:1.2});
+    },
+    // Toolbar +/- zoom buttons (gesture pinch already works natively).
+    zoomIn(){_zoomBy(0.5)},
+    zoomOut(){_zoomBy(2.0)},
+    // "Center on me" button. Frame the operator at SCREEN CENTER even when
+    // the globe is tilted: lookAt orbits the camera around the user's ground
+    // position at the current heading/pitch and camera-to-target distance
+    // (so zoom/tilt are preserved and the marker stays centered), then the
+    // lookAt transform is released so free pan/zoom works again after.
+    centerOnSelf(arg){const e=_parse(arg);if(!e||typeof e.lat!=='number'||typeof e.lon!=='number')return;const v=_state.viewer;if(!v)return;
+      const target=Cesium.Cartesian3.fromDegrees(e.lon,e.lat,0);
+      let range=Cesium.Cartesian3.distance(v.camera.positionWC,target);
+      if(!isFinite(range)||range<=0)range=v.camera.positionCartographic.height||5000;
+      const heading=v.camera.heading,pitch=v.camera.pitch;
+      v.camera.lookAt(target,new Cesium.HeadingPitchRange(heading,pitch,range));
+      v.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);_postCameraChanged(v);
+    },
+    // #78 (Android) / #62 (iOS) — engine-switch viewport handoff. Native
+    // calls this once on bridge-ready with the 2D engine's last camera;
+    // cancels the (0,0) bootstrap flight and jumps straight to the
+    // inherited view, top-down like the 2D map. `height` is precomputed
+    // natively from the web-mercator zoom (CesiumCameraMath is the exact
+    // inverse of _zoomFromHeight above). Optional pitch (deg, default -90)
+    // keeps the method reusable for pose restores. No call = legacy intro.
+    setCamera(arg){const e=_parse(arg);if(!e||typeof e.lat!=='number'||typeof e.lon!=='number'||typeof e.height!=='number')return;const v=_state.viewer;if(!v)return;
+      v.camera.cancelFlight();
+      v.camera.setView({destination:Cesium.Cartesian3.fromDegrees(e.lon,e.lat,e.height),orientation:{heading:Cesium.Math.toRadians(e.heading||0),pitch:Cesium.Math.toRadians(typeof e.pitch==='number'?e.pitch:-90),roll:0}});
+      _hideLoading();_postCameraChanged(v);
+    },
+    // Issue #95 — north-up lock parity with the 2D MapLibre engine and iOS.
+    // snapToNorth animates the globe heading back to 0 about the point the
+    // camera is currently looking at, preserving pitch and camera-to-ground
+    // range so only the bearing changes (no zoom / tilt jump). Used both by
+    // the compass tap (lock off) and internally when the lock engages.
+    snapToNorth(animate){const v=_state.viewer;if(!v)return;_headingToNorth(v,animate!==false);},
+    // setNorthUpLocked(true): snap to north, then hold heading 0 by (a)
+    // disabling the free-look / tilt inputs that introduce heading on a
+    // touch globe and (b) re-zeroing heading on every camera change as a
+    // backstop (a stray two-finger twist or programmatic flyTo can still
+    // drift it). false restores the inputs and removes the enforcer.
+    setNorthUpLocked(arg){const on=(arg===true||arg==='true');const v=_state.viewer;if(!v)return;
+      _state.northLocked=on;
+      const ctrl=v.scene.screenSpaceCameraController;
+      if(on){
+        // Left-drag still pans the globe (changes lat/lon, not heading);
+        // only the heading-bearing gestures are suppressed so the map still
+        // feels alive while locked north-up.
+        ctrl.enableLook=false;ctrl.enableTilt=false;
+        _headingToNorth(v,true);
+        if(!_state.northEnforcer){
+          _state.northEnforcer=function(){
+            if(!_state.northLocked)return;
+            // toDegrees(heading) is 0..360; treat ~0 and ~360 as on-north.
+            const hd=Cesium.Math.toDegrees(v.camera.heading);
+            const off=Math.min(Math.abs(hd),Math.abs(360-hd));
+            if(off>0.5)_headingToNorth(v,false);
+          };
+          v.camera.changed.addEventListener(_state.northEnforcer);
+          // changed fires only past camera.percentageChanged of movement;
+          // the default is generous, so tighten it while locked for a
+          // responsive snap-back, then it's restored on unlock.
+          _state._priorPct=v.camera.percentageChanged;v.camera.percentageChanged=0.02;
+        }
+      }else{
+        ctrl.enableLook=true;ctrl.enableTilt=true;
+        if(_state.northEnforcer){v.camera.changed.removeEventListener(_state.northEnforcer);_state.northEnforcer=null;
+          if(typeof _state._priorPct==='number')v.camera.percentageChanged=_state._priorPct;}
+      }
+    },
+    ping(){return _state.ready?'pong':'loading'},
+    upsertDrawing(arg){const d=_parse(arg);if(!d||!d.uid||!d.kind||!Array.isArray(d.coords)||d.coords.length===0)return;const v=_state.viewer;if(!v)return;
+      const color=_drawColor(d.color,0.85),fillC=_drawColor(d.color,0.25),width=typeof d.width==='number'?d.width:3;
+      const prior=_state.drawings.get(d.uid);if(prior)v.entities.remove(prior);
+      const opts={id:d.uid};
+      if(d.kind==='line'){opts.polyline={positions:d.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],0)),width:width,material:color,clampToGround:true};}
+      else if(d.kind==='polygon'){const positions=d.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],0));
+        opts.polygon={hierarchy:new Cesium.PolygonHierarchy(positions),material:fillC,outline:false,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND};
+        opts.polyline={positions:[...positions,positions[0]],width:width,material:color,clampToGround:true};}
+      else if(d.kind==='circle'){if(d.coords.length<2)return;const center=d.coords[0],edge=d.coords[1],radius=_havDist(center,edge);
+        opts.position=Cesium.Cartesian3.fromDegrees(center[0],center[1],0);
+        opts.ellipse={semiMajorAxis:radius,semiMinorAxis:radius,material:fillC,outline:true,outlineColor:color,outlineWidth:width,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND};}
+      else return;
+      _state.drawings.set(d.uid,v.entities.add(opts));
+    },
+    setDrawings(arg){const list=_parse(arg);if(!Array.isArray(list))return;const seen=new Set();
+      for(const d of list)if(d&&d.uid){seen.add(d.uid);window.OmniBridge.upsertDrawing(d);}
+      const v=_state.viewer;if(!v)return;
+      for(const uid of Array.from(_state.drawings.keys()))if(!seen.has(uid)){const e=_state.drawings.get(uid);if(e)v.entities.remove(e);_state.drawings.delete(uid);}
+    }
+  };
+  (async()=>{
+    _fitViewport();
+    const v=new Cesium.Viewer('cesiumContainer',{terrain:Cesium.Terrain.fromWorldTerrain(),animation:false,timeline:false,baseLayerPicker:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,creditContainer:document.createElement('div')});
+    v.scene.skyAtmosphere.show=true;v.scene.globe.enableLighting=true;_state.viewer=v;_fitViewport();_installInputHandlers(v);
+    try{const t=await Cesium.createGooglePhotorealistic3DTileset();v.scene.primitives.add(t);}catch(e){console.warn('Photoreal unavailable:',e);}
+    v.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(0.0,0.0,20000000),orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:1.5,complete:_hideLoading});
+    _signalReady();
+  })().catch(e=>{const el=document.getElementById('loading');if(el)el.innerHTML='<div class="label">3D scene failed: '+(e&&e.message?e.message:'unknown')+'</div>';});
+</script></body></html>

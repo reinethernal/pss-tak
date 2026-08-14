@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- QR scanner — reads the camera for profile import. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Issue #5 — foreground service holds the TLS socket warm while the
+         app is backgrounded so Android's Doze / app-standby scheduler
+         doesn't kill the read loop after ~10s. POST_NOTIFICATIONS is
+         opt-in on Android 13+ but we degrade gracefully if denied:
+         the service still runs, the persistent chip just doesn't show. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Bluetooth LE for the Meshtastic BLE transport (Android 12+). -->
+    <!-- BLUETOOTH_SCAN with neverForLocation: we don't infer location from
+         scan results, so we don't request the legacy ACCESS_FINE_LOCATION
+         coupling that pre-12 BLE scans needed. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <!-- Legacy permissions (Android 11 and below). -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <!-- Classic Bluetooth is implied-required by the BLUETOOTH permission;
+         mark it optional so devices like Nothing Phone (2a) Plus / A142P
+         that report a non-standard BT feature profile aren't filtered. -->
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <!-- Location features are implied-required by FINE/COARSE_LOCATION;
+         the map and CoT work without a GPS fix (PPLI just goes dark), so
+         mark them optional rather than excluding GPS-less devices. -->
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.network"
+        android:required="false" />
+
+    <application
+        android:name=".OmniTAKApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/app_icon"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/app_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.OmniTAK.Launch">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:theme="@style/Theme.OmniTAK.Launch">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- GAP-105 rest / #100 — data-package + enrollment deep links.
+                 On-ramps:
+                 1. tak://com.atakmap.app/enroll?host=…&username=…&token=…
+                    — the standard ATAK / TAK Server / ArgusTAK enrollment
+                    QR. Scanning it with the OS camera app opens OmniTAK and
+                    auto-enrolls a client cert (#100).
+                 2. atak://… deep links (matches ATAK's own scheme so
+                    QR codes generated for ATAK can also onboard OmniTAK).
+                 3. omnitak://… deep links (our own future-proof scheme:
+                    server-connect AND config-profile sync). -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tak" />
+                <data android:scheme="atak" />
+                <data android:scheme="omnitak" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".domain.TAKConnectionService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Issue #16 — FileProvider for lasso exports (KML / Mission
+             Package zip) so we can hand them to the system share sheet
+             via Intent.EXTRA_STREAM. Paths declared in
+             res/xml/file_paths.xml; only the externalCacheDir/exports
+             subdir is exposed. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>
