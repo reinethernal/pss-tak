@@ -101,12 +101,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: android-actions/setup-android@v3
       - name: Install fdroidserver + apksigner deps
         run: |
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq apksigner aapt libmagic1
           pip install "fdroidserver==2.4.4"
+          # aapt from SDK is more reliable for AGP 8+ APKs than androguard alone
+          yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
+          sdkmanager "build-tools;35.0.0"
 
       - name: Download APK artifacts
         uses: actions/download-artifact@v4
@@ -145,16 +149,19 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import os
+          sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT') or ''
           Path('fdroid/config.yml').write_text(f"""repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
           repo_name: PSS TAK
           repo_description: Полевой репозиторий ПСР (PSS TAK + OpenTAK ICU) для fts.plasmadancer.ru
           archive_older: 0
           make_current_version_link: false
+          sdk_path: {sdk}
           keystore: keystore.jks
           repo_keyalias: {os.environ['FDROID_REPO_KEY_ALIAS']}
           keystorepass: {os.environ['FDROID_REPO_KEYSTORE_PASS']}
           keypass: {os.environ['FDROID_REPO_KEY_PASS']}
           """.replace('          ', ''))
+          Path('fdroid/config.yml').chmod(0o600)
           PY
 
       - name: fdroid update

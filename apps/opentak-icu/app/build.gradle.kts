@@ -11,12 +11,6 @@ if (hasKeystore) {
 
 plugins {
     id("com.android.application")
-    id("io.github.reactivecircus.app-versioning") version "1.5.0"
-}
-
-// Monorepo: Gradle root is apps/opentak-icu, git root is two levels up.
-appVersioning {
-    gitRootDirectory.set(rootProject.file("../.."))
 }
 
 android {
@@ -27,6 +21,8 @@ android {
         applicationId = "io.opentakserver.opentakicu"
         minSdk = 26
         targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
