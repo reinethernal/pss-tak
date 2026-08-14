@@ -59,3 +59,6 @@ fdroid/keystore.p12
 fdroid/repo/*.apk
 fdroid/repo/index*
 fdroid/tmp/
+
+# Firebase / Google API keys (never commit)
+**/google-services.json

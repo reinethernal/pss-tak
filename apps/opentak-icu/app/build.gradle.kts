@@ -11,8 +11,6 @@ if (hasKeystore) {
 
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
     id("io.github.reactivecircus.app-versioning") version "1.5.0"
 }
 
@@ -89,10 +87,6 @@ dependencies {
     implementation("javax.xml.stream:stax-api:1.0-2")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
     implementation("com.sealwu:kscript-tools:1.0.22")
-    implementation("com.google.firebase:firebase-analytics:23.0.0")
-    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.github.topjohnwu.libsu:core:6.0.0")
     implementation("com.github.topjohnwu.libsu:nio:6.0.0")
 
