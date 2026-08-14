@@ -14,6 +14,11 @@ plugins {
     id("io.github.reactivecircus.app-versioning") version "1.5.0"
 }
 
+// Monorepo: Gradle root is apps/opentak-icu, git root is two levels up.
+appVersioning {
+    gitRootDirectory.set(rootProject.file("../.."))
+}
+
 android {
     namespace = "io.opentakserver.opentakicu"
     compileSdk = 35
