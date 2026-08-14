@@ -107,7 +107,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq apksigner aapt libmagic1
-          pip install "fdroidserver==2.4.4" "androguard==4.0.2"
+          pip install "fdroidserver==2.4.4" "androguard==4.1.4"
           # aapt from SDK is more reliable for AGP 8+ APKs than androguard alone
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "build-tools;35.0.0"
@@ -126,7 +126,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${FDROID_REPO_KEYSTORE_B64:-}" || { echo "missing FDROID_REPO_KEYSTORE_B64 secret"; exit 1; }
-          mkdir -p fdroid/repo
+          mkdir -p fdroid/repo/icons
+          test -f fdroid/repo/icons/icon.png
           echo "$FDROID_REPO_KEYSTORE_B64" | base64 -d > fdroid/keystore.jks
           # Copy latest APKs (rename clearly)
           find /tmp/apks -name '*.apk' -print
