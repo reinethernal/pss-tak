@@ -1,35 +1,33 @@
 # PSS TAK
 
-Полевой TAK-клиент для ПСР на базе [OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) (Apache 2.0).
+Монорепозиторий полевых Android-клиентов для ПСР / OpenTAKServer (`fts.plasmadancer.ru`).
 
-Сервер по умолчанию при первом запуске: **fts.plasmadancer.ru:8089** (TLS). Нужна enroll логином OpenTAKServer.
+**Откуда код:** см. [SOURCES.md](SOURCES.md).
 
-## Сборка
+## Приложения
 
-```bash
-./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk
-```
-
-JDK 17, Android SDK (platform 35), желательно NDK `28.2.13676358`.
+| Путь | APK | Upstream |
+|------|-----|----------|
+| `apps/pss-tak` | PSS TAK | [OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) |
+| `apps/opentak-icu` | OpenTAK ICU | [OpenTAK_ICU](https://github.com/brian7704/OpenTAK_ICU) |
+| `packages/atak-config` | ZIP для ATAK CIV | скрипт + [atak-civ](https://github.com/TAK-Product-Center/atak-civ) (APK CIV вне CI) |
 
 ## CI
 
-На **каждый push** в любую ветку GitHub Actions (workflow `CI`):
+На **каждый push** GitHub Actions собирает **оба** APK (`pss-tak` и `opentak-icu`) и кладёт их в Artifacts.
 
-1. Собирает debug APK  
-2. Кладёт его в **Artifacts** (хранить 14 дней)  
-3. Гоняет unit-тесты  
+## Локальная сборка
 
-Ручной запуск: Actions → CI → Run workflow.  
-Теги дополнительно публикуют APK в GitHub Release.
+```bash
+# PSS TAK
+cd apps/pss-tak && ./gradlew assembleDebug
 
+# OpenTAK ICU
+cd apps/opentak-icu && ./gradlew assembleDebug
+```
+
+JDK 17, Android SDK platform 35.
 
 ## F-Droid
 
-Официальный f-droid.org потребует FOSS flavor без `play-services-location` / ML Kit — см. `docs/FDROID.md`.
-Свой F-Droid-репозиторий на сервере ПСР можно подключить отдельно.
-
-## Лицензия
-
-Apache License 2.0 (как upstream OmniTAK) + правки ПСР.
+См. `apps/pss-tak/docs/FDROID.md`. Официальный f-droid.org потребует FOSS flavor без Play Services.

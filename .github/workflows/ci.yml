@@ -1,6 +1,6 @@
-# PSS TAK CI — сборка APK на каждый push + unit-тесты
 name: CI
 
+# Сборка всех изменённых приложений на каждый push
 on:
   push:
   pull_request:
@@ -11,22 +11,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build APK
+  build-pss-tak:
+    name: APK · PSS TAK (OmniTAK)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/pss-tak
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
+          cache-dependency-path: apps/pss-tak/**/build.gradle.kts
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
 
       - name: Install SDK packages
         run: |
@@ -34,50 +36,67 @@ jobs:
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358"
 
-      - name: Write local.properties
+      - name: local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
 
-      - name: Assemble debug APK
+      - name: assembleDebug
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
-      - name: Locate APK
-        id: apk
-        run: |
-          set -euo pipefail
-          APK=$(find app/build/outputs/apk -name '*.apk' | head -1)
-          test -n "$APK" && test -f "$APK"
-          echo "path=$APK" >> "$GITHUB_OUTPUT"
-          ls -lh "$APK"
-
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: pss-tak-${{ github.run_number }}-${{ github.sha }}
-          path: ${{ steps.apk.outputs.path }}
+          path: apps/pss-tak/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 14
 
-      - name: Run unit tests
+      - name: Unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
-      - name: Upload unit test reports
-        if: failure()
+  build-opentak-icu:
+    name: APK · OpenTAK ICU
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/opentak-icu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: apps/opentak-icu/**/build.gradle*
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
+          # ICU historically uses older build-tools; install both
+          sdkmanager "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
+
+      - name: local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-reports-${{ github.run_number }}
-          path: app/build/reports/tests/testDebugUnitTest/
+          name: opentak-icu-${{ github.run_number }}-${{ github.sha }}
+          path: apps/opentak-icu/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
           retention-days: 14
-
-      - name: Upload to GitHub Release (tags only)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.apk.outputs.path }}
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

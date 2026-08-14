@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:key="atak_preferences">
+    <PreferenceCategory android:title="@string/atak_preferences">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="send_cot"
+            android:title="@string/send_cots"
+            app:summary="" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="send_stream_details"
+            android:title="@string/send_stream_connection_details"
+            app:summary="@string/send_stream_connection_details_summary"
+            android:dependency="send_cot" />
+        <EditTextPreference
+            android:key="atak_address"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:defaultValue="fts.plasmadancer.ru"
+            android:title="@string/atak_address"
+            android:dependency="send_cot" />
+        <EditTextPreference
+            android:key="atak_port"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:defaultValue="8089"
+            android:title="@string/atak_port"
+            android:dependency="send_cot" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="atak_auth"
+            android:title="@string/atak_auth"
+            app:summary=""
+            android:dependency="send_cot" />
+        <EditTextPreference
+            android:key="atak_username"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/atak_username"
+            android:dependency="atak_auth" />
+        <EditTextPreference
+            android:key="atak_password"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/atak_password"
+            android:dependency="atak_auth" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="atak_ssl"
+            android:title="@string/atak_ssl"
+            app:summary="@string/atak_ssl_summary"
+            android:dependency="send_cot" />
+        <Preference
+            android:dependency="atak_ssl"
+            android:key="trust_store_certificate"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/trust_store_cert" />
+        <EditTextPreference
+            android:defaultValue="atakatak"
+            android:dependency="atak_ssl"
+            android:key="trust_store_cert_password"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/trust_store_cert_password" />
+        <Preference
+            android:dependency="atak_ssl"
+            android:key="test_trust_store"
+            android:title="@string/test_trust_store"
+            app:summary="@string/test_certificate_description" />
+        <Preference
+            android:dependency="atak_ssl"
+            android:key="client_certificate"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/client_cert" />
+        <EditTextPreference
+            android:defaultValue="atakatak"
+            android:dependency="atak_ssl"
+            android:key="client_cert_password"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/client_cert_password" />
+        <Preference
+            android:dependency="atak_ssl"
+            android:key="test_client_cert"
+            android:title="@string/test_client_cert"
+            app:summary="@string/test_certificate_description" />
+    </PreferenceCategory>
+</androidx.preference.PreferenceScreen>

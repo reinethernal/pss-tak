@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="main_preferences_screen">
+
+    <Preference
+        app:fragment="io.opentakserver.opentakicu.preferences.StreamPreferencesFragment"
+        android:key="stream_settings"
+        android:title="@string/stream_preferences"
+    />
+
+    <Preference
+        app:fragment="io.opentakserver.opentakicu.preferences.VideoPreferencesFragment"
+        android:key="video_settings"
+        android:title="@string/video_preferences"
+    />
+
+    <Preference
+        app:fragment="io.opentakserver.opentakicu.preferences.AudioPreferencesFragment"
+        android:key="audio_settings"
+        android:title="@string/audio_preferences"
+    />
+
+    <Preference
+            app:fragment="io.opentakserver.opentakicu.preferences.ATAKPreferencesFragment"
+            android:key="atak_settings"
+            android:title="@string/atak_preferences"
+    />
+</PreferenceScreen>
