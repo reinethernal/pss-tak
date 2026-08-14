@@ -1,0 +1,18 @@
+Categories:
+  - Multimedia
+  - Connectivity
+License: Apache-2.0
+AuthorName: PSS TAK / OpenTAK ICU upstream
+WebSite: https://github.com/reinethernal/pss-tak
+SourceCode: https://github.com/reinethernal/pss-tak
+IssueTracker: https://github.com/reinethernal/pss-tak/issues
+
+Name: OpenTAK ICU (PSR debug)
+Summary: Живое видео на MediaMTX ПСР
+Description: |
+  OpenTAK ICU с defaults fts.plasmadancer.ru (RTSP/CoT).
+  Upstream: https://github.com/brian7704/OpenTAK_ICU
+  Debug-сборка (applicationId …icu.debug).
+
+RepoType: git
+Repo: https://github.com/reinethernal/pss-tak.git

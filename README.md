@@ -16,18 +16,27 @@
 
 На **каждый push** GitHub Actions собирает **оба** APK (`pss-tak` и `opentak-icu`) и кладёт их в Artifacts.
 
+На push в `main` дополнительно обновляется **свой F-Droid** на GitHub Pages.
+
+## Свой F-Droid
+
+- Сайт: https://reinethernal.github.io/pss-tak/
+- URL для F-Droid / Neo Store / Obtainium:
+
+`https://reinethernal.github.io/pss-tak/fdroid/repo?fingerprint=061cac831dec49c4c6dfd7c49f2d6f075e2bbbe4ca623e7765ed99a9187609c8`
+
+- Fingerprint: `061cac831dec49c4c6dfd7c49f2d6f075e2bbbe4ca623e7765ed99a9187609c8`
+- Подробнее: [fdroid/README.md](fdroid/README.md)
+
 ## Локальная сборка
 
 ```bash
-# PSS TAK
 cd apps/pss-tak && ./gradlew assembleDebug
-
-# OpenTAK ICU
 cd apps/opentak-icu && ./gradlew assembleDebug
 ```
 
 JDK 17, Android SDK platform 35.
 
-## F-Droid
+## F-Droid.org
 
-См. `apps/pss-tak/docs/FDROID.md`. Официальный f-droid.org потребует FOSS flavor без Play Services.
+См. `apps/pss-tak/docs/FDROID.md`. Официальный каталог потребует FOSS flavor без Play Services.

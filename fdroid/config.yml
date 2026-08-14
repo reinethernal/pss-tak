@@ -1,0 +1,8 @@
+repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
+repo_name: PSS TAK
+repo_description: >-
+  Полевой репозиторий ПСР: PSS TAK (OmniTAK) и OpenTAK ICU с defaults
+  для fts.plasmadancer.ru. Не официальный f-droid.org.
+archive_older: 0
+make_current_version_link: false
+# keystore / passwords подставляются в CI из GitHub Secrets

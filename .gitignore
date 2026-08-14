@@ -52,3 +52,10 @@ app/src/main/jniLibs/
 
 # Agent worktrees
 .claude/worktrees/
+
+# F-Droid local/CI secrets (never commit)
+fdroid/keystore.jks
+fdroid/keystore.p12
+fdroid/repo/*.apk
+fdroid/repo/index*
+fdroid/tmp/

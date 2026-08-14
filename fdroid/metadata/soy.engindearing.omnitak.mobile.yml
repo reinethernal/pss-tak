@@ -1,0 +1,18 @@
+Categories:
+  - Navigation
+  - Connectivity
+License: Apache-2.0
+AuthorName: PSS TAK / OmniTAK upstream
+WebSite: https://github.com/reinethernal/pss-tak
+SourceCode: https://github.com/reinethernal/pss-tak
+IssueTracker: https://github.com/reinethernal/pss-tak/issues
+
+Name: PSS TAK
+Summary: Полевой TAK-клиент ПСР (OmniTAK)
+Description: |
+  Клиент TAK для ПСР на базе OmniTAK-Android.
+  При первом запуске сервер fts.plasmadancer.ru:8089 уже в списке.
+  Upstream: https://github.com/engindearing-projects/OmniTAK-Android
+
+RepoType: git
+Repo: https://github.com/reinethernal/pss-tak.git
