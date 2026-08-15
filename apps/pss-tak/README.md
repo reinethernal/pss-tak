@@ -4,6 +4,8 @@
 
 Сервер по умолчанию при первом запуске: **fts.plasmadancer.ru:8089** (TLS). Нужна enroll логином OpenTAKServer.
 
+Контекст сервиса ПСР и список отличий от OmniTAK: [../../README.md](../../README.md), [../../SOURCES.md](../../SOURCES.md).
+
 ## Сборка
 
 ```bash

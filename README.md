@@ -1,22 +1,34 @@
 # PSS TAK
 
-Монорепозиторий полевых Android-клиентов для ПСР / OpenTAKServer (`fts.plasmadancer.ru`).
+Полевые Android-клиенты и пакеты настроек для **системы ПСР** (поиск и спасение / situational awareness) на сервере OpenTAKServer:
 
-**Откуда код:** см. [SOURCES.md](SOURCES.md).
+**https://fts.plasmadancer.ru**
 
-## Приложения
+Этот репозиторий — не сам сервер, а **клиентская сторона**: готовые приложения и конфиги, уже привязанные к ПСР, плюс свой F-Droid для раздачи APK.
 
-| Путь | APK | Upstream |
-|------|-----|----------|
-| `apps/pss-tak` | PSS TAK | [OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) |
-| `apps/opentak-icu` | OpenTAK ICU | [OpenTAK_ICU](https://github.com/brian7704/OpenTAK_ICU) |
-| `packages/atak-config` | ZIP для ATAK CIV | скрипт + [atak-civ](https://github.com/TAK-Product-Center/atak-civ) (APK CIV вне CI) |
+## Что это за сервис в целом
 
-## CI
+| Компонент | Роль |
+|-----------|------|
+| **OpenTAKServer** на `fts.plasmadancer.ru` | Сервер TAK: карта, контакты, миссии/операции, файлы, живое видео (MediaMTX), enrollment сертификатов |
+| **Веб-UI** | Диспетчерская: обзор, карта, тревоги, операции (в т.ч. чат миссии), пользователи, приложения для телефонов |
+| **Клиенты на телефоне** | Подключение полевых по SSL CoT `:8089`, enrollment `:8446`; видео — RTSP/RTSPS |
+| **Этот GitHub-репозиторий** | Сборка и раздача клиентов ПСР (форки открытых проектов + datapackage для ATAK CIV) |
 
-На **каждый push** GitHub Actions собирает **оба** APK (`pss-tak` и `opentak-icu`) и кладёт их в Artifacts.
+Рекомендуемый полный клиент в поле: **ATAK CIV** + zip настроек из `packages/atak-config`.  
+Лёгкий запасной клиент: **PSS TAK**.  
+Живое видео с телефона: **OpenTAK ICU**.
 
-На push в `main` дополнительно обновляется **свой F-Droid** на GitHub Pages.
+## Что внутри монорепо
+
+| Путь | Что это | Зачем |
+|------|---------|--------|
+| [`apps/pss-tak`](apps/pss-tak/) | APK **PSS TAK** | Лёгкий TAK-клиент (карта/CoT/чат) с сервером ПСР из коробки |
+| [`apps/opentak-icu`](apps/opentak-icu/) | APK **OpenTAK ICU** | Стрим камеры/экрана на MediaMTX ПСР + CoT на OTS |
+| [`packages/atak-config`](packages/atak-config/) | ZIP для **ATAK CIV** | Data package / field kit: хост, порты, truststore — без сборки самого ATAK |
+| [`fdroid/`](fdroid/) | Свой F-Droid | Раздача APK через GitHub Pages |
+
+Откуда взяты оригиналы и **какие правки сделаны** — в [SOURCES.md](SOURCES.md).
 
 ## Свой F-Droid
 
@@ -27,6 +39,11 @@
 
 - Fingerprint: `061cac831dec49c4c6dfd7c49f2d6f075e2bbbe4ca623e7765ed99a9187609c8`
 - Подробнее: [fdroid/README.md](fdroid/README.md)
+
+## CI
+
+На **каждый push** собираются debug APK (`pss-tak` и `opentak-icu`) → Artifacts.  
+На push в `main` дополнительно обновляется F-Droid на GitHub Pages.
 
 ## Локальная сборка
 

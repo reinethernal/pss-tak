@@ -1,28 +1,80 @@
-# Источники исходников (PSS TAK monorepo)
+# Источники и отличия от оригиналов
 
-Все клиенты в этом репозитории — **форки / производные** открытых проектов с правками под OpenTAKServer ПСР (`fts.plasmadancer.ru`).
+Все клиенты здесь — **форки / производные** открытых проектов.  
+Цель правок: сразу работать с OpenTAKServer ПСР **`fts.plasmadancer.ru`**, без ручной возни с хостом при первом запуске.
 
-| Каталог | Что собираем | Upstream (откуда взято) | Лицензия upstream |
-|---------|--------------|-------------------------|-------------------|
-| [`apps/pss-tak`](apps/pss-tak/) | APK **PSS TAK** (основной лёгкий клиент) | [engindearing-projects/OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) | Apache-2.0 |
-| [`apps/opentak-icu`](apps/opentak-icu/) | APK **OpenTAK ICU** (живое видео) | [brian7704/OpenTAK_ICU](https://github.com/brian7704/OpenTAK_ICU) | см. LICENSE в каталоге |
-| [`packages/atak-config`](packages/atak-config/) | ZIP настроек ATAK CIV (не APK) | генерируется скриптом под OTS; клиент — [TAK-Product-Center/atak-civ](https://github.com/TAK-Product-Center/atak-civ) (APK CIV в CI **не** собирается: NDK/Conan) | TAK / upstream atak-civ |
+## Таблица upstream
 
-## Наши правки ПСР
+| Каталог | Что собираем | Upstream | Лицензия |
+|---------|--------------|----------|----------|
+| [`apps/pss-tak`](apps/pss-tak/) | APK **PSS TAK** | [engindearing-projects/OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) | Apache-2.0 |
+| [`apps/opentak-icu`](apps/opentak-icu/) | APK **OpenTAK ICU** | [brian7704/OpenTAK_ICU](https://github.com/brian7704/OpenTAK_ICU) | см. LICENSE в каталоге |
+| [`packages/atak-config`](packages/atak-config/) | ZIP настроек ATAK CIV (не APK) | скрипт под OTS; клиент — [TAK-Product-Center/atak-civ](https://github.com/TAK-Product-Center/atak-civ) (APK CIV в CI **не** собирается) | TAK / upstream atak-civ |
 
-- **PSS TAK (`apps/pss-tak`)**: при пустом списке серверов добавляется `fts.plasmadancer.ru:8089` TLS; отображаемое имя «PSS TAK».
-- **OpenTAK ICU (`apps/opentak-icu`)**: defaults RTSP/CoT на `fts.plasmadancer.ru`, порт CoT `8089` SSL, класс `PsrServerDefaults`; CA `truststore-root.p12` в git **не** кладётся (только на сервере сборки).
+---
+
+## PSS TAK ← OmniTAK-Android
+
+**Зачем:** лёгкий полевой TAK-клиент (не ATAK), уже смотрящий на сервер ПСР.
+
+### Изменения относительно upstream
+
+| Изменение | Зачем |
+|-----------|--------|
+| Имя приложения **«PSS TAK»**, описание под ПСР (`app_assets/.../strings.xml`) | Отличать сборку от стокового OmniTAK |
+| При пустом списке серверов в `ServerManager.hydrate()` добавляется сервер **ПСР**: `fts.plasmadancer.ru:8089`, TLS, `allowUntrustedTls` для первого enrollment | Первый запуск уже привязан к OTS; сертификат всё равно получается через enrollment |
+| CI / monorepo layout (`apps/pss-tak`), артефакты APK | Сборка вместе с ICU и публикация в свой F-Droid |
+
+Функционально это тот же OmniTAK (карта, CoT, мессенджер, Meshtastic и т.д.) — без претензии заменить ATAK CIV по возможностям.
+
+---
+
+## OpenTAK ICU ← OpenTAK_ICU
+
+**Зачем:** стрим видео/аудио с телефона на MediaMTX ПСР и отправка CoT на OpenTAKServer.
+
+### Изменения относительно upstream
+
+| Изменение | Зачем |
+|-----------|--------|
+| Defaults хоста **`fts.plasmadancer.ru`** в `Preferences` и XML preference-экранах | Не вводить IP вручную |
+| Класс **`PsrServerDefaults`**: one-shot заполнение prefs (RTSP/CoT, SSL, пароль truststore), копирование CA из assets при наличии | Сразу RTSP/CoT на сервер ПСР |
+| Вызов `PsrServerDefaults.apply()` из `MainActivity` / `OnBoardingActivity` | Defaults применяются при старте |
+| **`truststore-root.p12` в git не коммитится** (только на build-хосте / в assets при локальной сборке с CA) | Не светить CA в публичном репозитории |
+| Убраны Firebase / Crashlytics / `google-services.json` | Секрет Google API key утёк в git; аналитика для ПСР не нужна; CI собирается без файла |
+| Явные `versionCode` / `versionName` вместо git-tag плагина app-versioning | Плагин ломался в monorepo и отдавал пустой versionCode (ломало F-Droid) |
+| Опциональный `keystore.properties` | Debug-сборка в CI без release-подписи |
+
+Поведение стриминга (кодеки, RTSP/RTMP/SRT и т.д.) — как у upstream OpenTAK ICU.
+
+---
+
+## packages/atak-config ← не форк APK
+
+**Зачем:** официальный **ATAK CIV** — основной «тяжёлый» клиент ПСР; в этом репо только **пакет настроек**.
+
+| Что сделано | Зачем |
+|-------------|--------|
+| `build-atak-datapackage.sh` → `psr-atak-config.zip` (config.pref + truststore под OTS) | Импорт в ATAK → enrollment на `fts.plasmadancer.ru` |
+| `build-field-kit.sh` → комплект с инструкцией | Единый старт для полевых |
+| APK ATAK CIV **не** собирается в CI | Нужны NDK r12b / Conan; брать CIV с tak.gov / Play |
+
+---
+
+## Инфраструктура репозитория (нет в upstream-приложениях)
+
+- Monorepo + GitHub Actions: сборка обоих APK на каждый push  
+- Self-hosted F-Droid на GitHub Pages (`fdroid/`, QR на лендинге)  
+- Документация: этот файл, корневой [README.md](README.md)
 
 ## Что CI собирает при каждом push
 
-1. `apps/pss-tak` → `assembleDebug`
-2. `apps/opentak-icu` → `assembleDebug`
+1. `apps/pss-tak` → `assembleDebug`  
+2. `apps/opentak-icu` → `assembleDebug`  
 
-Артефакты APK загружаются в GitHub Actions Artifacts.
+На `main` — ещё `fdroid update` → Pages.
 
-## Локальные зеркала на сервере ПСР
-
-На build-хосте также лежат полные рабочие копии:
+## Локальные зеркала на build-хосте ПСР
 
 - `/opt/psr-client-build/OmniTAK-Android`
 - `/opt/psr-client-build/OpenTAK_ICU`
