@@ -43,8 +43,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.slider.Slider;
-import com.google.firebase.BuildConfig;
-import com.google.firebase.analytics.FirebaseAnalytics;
 import com.pedro.common.ConnectChecker;
 import com.pedro.encoder.input.sources.video.Camera2Source;
 import com.pedro.encoder.input.video.CameraHelper;
@@ -108,7 +106,6 @@ public class Camera2Fragment extends Fragment
     private boolean awaitingScreenCapturePermission = false;
     private Camera2Service camera_service;
     private long last_fix_time = 0;
-    private FirebaseAnalytics mFirebaseAnalytics;
 
     private ActivityResultLauncher<Intent> screenCaptureLauncher;
 
@@ -318,13 +315,6 @@ public class Camera2Fragment extends Fragment
         );
 
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        if (!BuildConfig.DEBUG) {
-            mFirebaseAnalytics = FirebaseAnalytics.getInstance(activity);
-            Bundle bundle = new Bundle();
-            bundle.putString("Activity", "MainActivity");
-            mFirebaseAnalytics.logEvent("Start", bundle);
-        }
 
         String uid = pref.getString(Preferences.UID, null);
         if (uid == null)
