@@ -52,9 +52,12 @@ class ContactStore(
         // Polygon / freehand drawings belong in DrawingStore, not the contact roster.
         if (ShapeCot.isShapeType(event.type)) return
         _contacts.update { current ->
+            val prev = current[event.uid]
             val stamped = event.copy(
                 receivedAtMs = if (event.receivedAtMs != 0L) event.receivedAtMs else nowMs,
-                source = event.source ?: current[event.uid]?.source,
+                source = event.source ?: prev?.source,
+                localPhotoPath = event.localPhotoPath ?: prev?.localPhotoPath,
+                localAudioPath = event.localAudioPath ?: prev?.localAudioPath,
             )
             current + (event.uid to stamped)
         }

@@ -75,6 +75,8 @@ data class UserPrefs(
     /** Local breadcrumb trails for self + peers (SAR «Треки»). Default off. */
     val trailsVisible: Boolean = false,
     val aircraftVisible: Boolean = true,
+    /** AIS / maritime CoT from server (OTS AISHub etc.). */
+    val vesselsVisible: Boolean = true,
     val contactsVisible: Boolean = true,
     val followMeActive: Boolean = false,
     /** Render self-position as a MIL-STD-2525 friendly-combat frame.
@@ -176,6 +178,7 @@ class UserPrefsStore(private val context: Context) {
     private val KEY_DRAWINGS_VIS = booleanPreferencesKey("drawings_visible")
     private val KEY_TRAILS_VIS = booleanPreferencesKey("trails_visible")
     private val KEY_AIRCRAFT_VIS = booleanPreferencesKey("aircraft_visible")
+    private val KEY_VESSELS_VIS = booleanPreferencesKey("vessels_visible")
     private val KEY_CONTACTS_VIS = booleanPreferencesKey("contacts_visible")
     private val KEY_FOLLOW_ME = booleanPreferencesKey("follow_me_active")
     private val KEY_MIL_STD_SELF = booleanPreferencesKey("use_milstd_self_symbol")
@@ -223,6 +226,7 @@ class UserPrefsStore(private val context: Context) {
             p[KEY_DRAWINGS_VIS] = next.drawingsVisible
             p[KEY_TRAILS_VIS] = next.trailsVisible
             p[KEY_AIRCRAFT_VIS] = next.aircraftVisible
+            p[KEY_VESSELS_VIS] = next.vesselsVisible
             p[KEY_CONTACTS_VIS] = next.contactsVisible
             p[KEY_FOLLOW_ME] = next.followMeActive
             p[KEY_MIL_STD_SELF] = next.useMilStdSelfSymbol
@@ -351,6 +355,7 @@ class UserPrefsStore(private val context: Context) {
         drawingsVisible = p[KEY_DRAWINGS_VIS] ?: true,
         trailsVisible = p[KEY_TRAILS_VIS] ?: false,
         aircraftVisible = p[KEY_AIRCRAFT_VIS] ?: true,
+        vesselsVisible = p[KEY_VESSELS_VIS] ?: true,
         contactsVisible = p[KEY_CONTACTS_VIS] ?: true,
         followMeActive = p[KEY_FOLLOW_ME] ?: false,
         useMilStdSelfSymbol = p[KEY_MIL_STD_SELF] ?: true,

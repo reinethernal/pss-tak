@@ -23,6 +23,7 @@ class OutgoingSendQueue(private val rootDir: File) {
     constructor(context: Context) : this(File(context.filesDir, "outgoing_queue"))
 
     private val photosDir = File(rootDir, "photos").also { it.mkdirs() }
+    private val voicesDir = File(rootDir, "voices").also { it.mkdirs() }
     private val indexFile = File(rootDir, "index.json")
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -36,6 +37,7 @@ class OutgoingSendQueue(private val rootDir: File) {
     init {
         rootDir.mkdirs()
         photosDir.mkdirs()
+        voicesDir.mkdirs()
         runCatching { loadLocked() }
     }
 
@@ -74,6 +76,31 @@ class OutgoingSendQueue(private val rootDir: File) {
         return item
     }
 
+    fun enqueueVoice(
+        audioBytes: ByteArray,
+        lat: Double,
+        lon: Double,
+        callsign: String,
+        remarks: String,
+        eventUid: String = "",
+    ): QueuedSend {
+        val id = UUID.randomUUID().toString()
+        val file = File(voicesDir, "$id.m4a")
+        file.writeBytes(audioBytes)
+        val item = QueuedSend(
+            id = id,
+            kind = KIND_VOICE,
+            photoRelPath = file.name,
+            lat = lat,
+            lon = lon,
+            callsign = callsign,
+            remarks = remarks,
+            eventUid = eventUid,
+        )
+        persistAdd(item)
+        return item
+    }
+
     /**
      * Attempt to send every queued item. Stops on first failure so order is preserved.
      * @return number of successfully flushed items
@@ -88,6 +115,14 @@ class OutgoingSendQueue(private val rootDir: File) {
             remarks: String,
             eventUid: String,
         ) -> Boolean,
+        publishVoice: suspend (
+            file: File,
+            lat: Double,
+            lon: Double,
+            callsign: String,
+            remarks: String,
+            eventUid: String,
+        ) -> Boolean = { _, _, _, _, _, _ -> false },
     ): Int = withContext(Dispatchers.IO) {
         mutex.withLock {
             val snapshot = _items.value.toList()
@@ -113,6 +148,19 @@ class OutgoingSendQueue(private val rootDir: File) {
                             )
                         }.getOrDefault(false)
                     }
+                    KIND_VOICE -> {
+                        val file = File(voicesDir, item.photoRelPath)
+                        file.isFile && runCatching {
+                            publishVoice(
+                                file,
+                                item.lat,
+                                item.lon,
+                                item.callsign,
+                                item.remarks,
+                                item.eventUid,
+                            )
+                        }.getOrDefault(false)
+                    }
                     else -> false
                 }
                 if (!ok) {
@@ -120,8 +168,9 @@ class OutgoingSendQueue(private val rootDir: File) {
                     break
                 }
                 remaining.removeAll { it.id == item.id }
-                if (item.kind == KIND_PHOTO) {
-                    File(photosDir, item.photoRelPath).delete()
+                when (item.kind) {
+                    KIND_PHOTO -> File(photosDir, item.photoRelPath).delete()
+                    KIND_VOICE -> File(voicesDir, item.photoRelPath).delete()
                 }
                 flushed++
             }
@@ -166,6 +215,7 @@ class OutgoingSendQueue(private val rootDir: File) {
         private const val TAG = "OutgoingSendQueue"
         const val KIND_COT = "cot"
         const val KIND_PHOTO = "photo"
+        const val KIND_VOICE = "voice"
     }
 }
 

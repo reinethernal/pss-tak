@@ -230,6 +230,55 @@ object CotBuilders {
     }
 
     /**
+     * Voice geo-marker (`b-i-x-a`) with optional `<fileshare>` after Marti upload.
+     */
+    fun buildVoiceMarkerEvent(
+        uid: String,
+        callsign: String,
+        lat: Double,
+        lon: Double,
+        remarks: String = "",
+        fileshareSha256: String? = null,
+        fileshareUrl: String? = null,
+        fileshareFilename: String = VoiceMarkerPackage.DEFAULT_FILENAME,
+        sizeInBytes: Long = 0L,
+        senderUid: String = uid,
+        senderCallsign: String = callsign,
+        staleSeconds: Long = 3600 * 24 * 7,
+    ): String {
+        val now = nowIso()
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(callsign)).append("\"/>")
+            if (remarks.isNotBlank()) {
+                append("<remarks>").append(CotXml.escape(remarks)).append("</remarks>")
+            }
+            if (!fileshareSha256.isNullOrBlank() && !fileshareUrl.isNullOrBlank()) {
+                append("<fileshare")
+                append(" filename=\"").append(CotXml.escape(fileshareFilename)).append('"')
+                append(" name=\"").append(CotXml.escape(callsign)).append('"')
+                append(" senderCallsign=\"").append(CotXml.escape(senderCallsign)).append('"')
+                append(" senderUid=\"").append(CotXml.escape(senderUid)).append('"')
+                append(" senderUrl=\"").append(CotXml.escape(fileshareUrl)).append('"')
+                append(" sha256=\"").append(CotXml.escape(fileshareSha256)).append('"')
+                append(" sizeInBytes=\"").append(sizeInBytes).append('"')
+                append("/>")
+            }
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = VoiceMarkerPackage.AUDIO_TYPE,
+            how = "h-g-i-g-o",
+            lat = lat,
+            lon = lon,
+            timeIso = now,
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
+
+    /**
      * ATAK-style freehand / polygon drawing (`u-d-f`) with vertex list on
      * `<link point="lat,lon,hae …"/>`. Used for search sectors (ПСР).
      */

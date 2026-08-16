@@ -215,11 +215,42 @@ fun MarkerEditSheet(
                 }
             } else if (
                 contact?.type == "b-i-x-i" ||
-                !contact?.fileshareSha256.isNullOrBlank()
+                (!contact?.fileshareSha256.isNullOrBlank() &&
+                    contact?.type != "b-i-x-a" &&
+                    !(contact?.fileshareFilename?.lowercase()?.endsWith(".m4a") == true))
             ) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Photo downloading…",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            // Voice geo-marker preview.
+            val audioPath = contact?.localAudioPath
+            if (!audioPath.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                TextButton(
+                    onClick = {
+                        runCatching {
+                            android.media.MediaPlayer().apply {
+                                setDataSource(audioPath)
+                                prepare()
+                                start()
+                            }
+                        }
+                    },
+                ) {
+                    Text("▶ Play voice note")
+                }
+            } else if (
+                contact?.type == "b-i-x-a" ||
+                contact?.fileshareFilename?.lowercase()?.endsWith(".m4a") == true
+            ) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Voice downloading…",
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodySmall,
                 )

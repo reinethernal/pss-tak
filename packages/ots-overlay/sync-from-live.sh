@@ -14,6 +14,8 @@ cp -a "$SITE_PKG/blueprints/ots_api/track_api.py" "$ROOT/site-packages/blueprint
 cp -a "$SITE_PKG/blueprints/ots_api/__init__.py" "$ROOT/site-packages/blueprints/ots_api/"
 cp -a "$SITE_PKG/models/MissionTask.py" "$ROOT/site-packages/models/"
 cp -a "$SITE_PKG/models/SearchSector.py" "$ROOT/site-packages/models/"
+mkdir -p "$ROOT/site-packages/blueprints"
+cp -a "$SITE_PKG/blueprints/scheduled_jobs.py" "$ROOT/site-packages/blueprints/"
 cp -a "$WWW/assets/js/psr-map-ext.js" "$ROOT/www/assets/js/"
 [[ -f "$WWW/assets/js/Map-CpwYNoVG.js" ]] && cp -a "$WWW/assets/js/Map-CpwYNoVG.js" "$ROOT/www/assets/js/"
 for f in psr-operation.html psr-sectors.html psr-start.txt НАЧНИТЕ-ЗДЕСЬ.txt; do

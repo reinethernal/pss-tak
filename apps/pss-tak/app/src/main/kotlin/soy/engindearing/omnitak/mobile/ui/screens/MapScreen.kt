@@ -26,6 +26,13 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Mic
+import android.Manifest
+import android.media.MediaRecorder
+import soy.engindearing.omnitak.mobile.domain.VoiceMarkerManager
+import soy.engindearing.adsb.LocalAdsbLayerVisible
+import androidx.compose.runtime.CompositionLocalProvider
+import soy.engindearing.omnitak.mobile.domain.VoiceMarkerPackage
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Straighten
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -149,6 +156,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     val drawingsVisible = userPrefs.drawingsVisible
     val trailsVisible = userPrefs.trailsVisible
     val aircraftVisible = userPrefs.aircraftVisible
+    val vesselsVisible = userPrefs.vesselsVisible
     val contactsVisible = userPrefs.contactsVisible
     val callsignCardVisible = userPrefs.callsignCardVisible
     val followMeActive = userPrefs.followMeActive
@@ -202,6 +210,11 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // Photo geo-marker (ATAK Quick Pic compatible): long-press → Photo → camera/gallery.
     var photoPendingLatLng by remember { mutableStateOf<LatLng?>(null) }
     var photoSourcePickerOpen by remember { mutableStateOf(false) }
+    var voicePendingLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var voiceRecordDialogOpen by remember { mutableStateOf(false) }
+    var voiceRecording by remember { mutableStateOf(false) }
+    var voiceRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var voiceTempFile by remember { mutableStateOf<File?>(null) }
     var pendingCameraCapture by remember { mutableStateOf<Pair<File, Uri>?>(null) }
     var selfMarkerEditOpen by remember { mutableStateOf(false) }
     // #82 — manual self-position override. Stored on LocationProvider (not
@@ -360,6 +373,64 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         }
     }
 
+    fun publishVoiceAt(ll: LatLng, file: File) {
+        scope.launch {
+            toast("Uploading voice marker…")
+            when (val result = app.voiceMarkerManager.publishFromFile(
+                file, ll.latitude, ll.longitude,
+            )) {
+                is VoiceMarkerManager.PublishResult.Ok ->
+                    toast("Voice marker sent (${result.hash.take(8)}…)")
+                is VoiceMarkerManager.PublishResult.Queued ->
+                    toast("Voice queued — will upload when online")
+                is VoiceMarkerManager.PublishResult.Failed ->
+                    toast("Voice failed: ${result.reason}")
+            }
+        }
+    }
+
+    fun stopVoiceRecorder(): File? {
+        val rec = voiceRecorder
+        val file = voiceTempFile
+        voiceRecorder = null
+        voiceTempFile = null
+        voiceRecording = false
+        return try {
+            rec?.stop()
+            rec?.release()
+            file?.takeIf { it.isFile && it.length() > 0 }
+        } catch (_: Exception) {
+            runCatching { rec?.release() }
+            null
+        }
+    }
+
+    fun startVoiceRecorder(): Boolean {
+        stopVoiceRecorder()
+        val dir = File(appContext.cacheDir, "voice_capture").also { it.mkdirs() }
+        val file = File(dir, "voice-${System.currentTimeMillis()}.m4a")
+        return try {
+            @Suppress("DEPRECATION")
+            val rec = MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioEncodingBitRate(128_000)
+                setAudioSamplingRate(44_100)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            voiceRecorder = rec
+            voiceTempFile = file
+            voiceRecording = true
+            true
+        } catch (e: Exception) {
+            toast("Mic failed: ${e.message}")
+            false
+        }
+    }
+
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture(),
     ) { ok ->
@@ -400,6 +471,19 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         )
         pendingCameraCapture = file to uri
         takePictureLauncher.launch(uri)
+    }
+
+
+    val micPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            toast("Microphone permission required for voice markers")
+            voiceRecordDialogOpen = false
+            voicePendingLatLng = null
+            return@rememberLauncherForActivityResult
+        }
+        voiceRecordDialogOpen = true
     }
 
     fun startCameraCapture() {
@@ -533,6 +617,12 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         soy.engindearing.omnitak.mobile.ui.components.KmlOverlayEvents.consumed()
     }
 
+    fun isAisVesselCot(type: String): Boolean {
+        // aiscot default a-u-S-X-M and variants a-f-S-… / a-n-S-…
+        val parts = type.split('-')
+        return parts.size >= 3 && parts[0] == "a" && parts[2] == "S"
+    }
+
     // Shared engine inputs — Cesium and MapLibre consume the SAME filtered
     // contact list and gesture handlers, hoisted once so a fix lands on
     // both engines together. Per-engine copies are the documented OmniTAK
@@ -546,7 +636,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             } else {
                 emptyList()
             }
-            if (sarPointsOnly) {
+            val afterSar = if (sarPointsOnly) {
                 base.filter {
                     soy.engindearing.omnitak.mobile.data.SarPointCatalog
                         .fromRemarksOrCallsign(it.remarks, it.callsign) != null
@@ -554,6 +644,9 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             } else {
                 base
             }
+            // AIS maritime CoT (OTS AISHub → a-*-S-…); hide when Layers → Суда off.
+            if (vesselsVisible) afterSar
+            else afterSar.filterNot { isAisVesselCot(it.type) }
         }
     // Native contacts (#77) + drawings (#80) render through the Annotation API,
     // which only re-renders on camera-idle or a style reload — so a marker
@@ -756,7 +849,9 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         androidx.compose.runtime.CompositionLocalProvider(
             soy.engindearing.omnitak.plugin.LocalMapEngineHandle provides null,
         ) {
-            app.pluginHost.mapOverlays.forEach { it.content() }
+            CompositionLocalProvider(LocalAdsbLayerVisible provides aircraftVisible) {
+                app.pluginHost.mapOverlays.forEach { it.content() }
+            }
         }
         } else {
         TacticalMap(
@@ -940,7 +1035,9 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         androidx.compose.runtime.CompositionLocalProvider(
             soy.engindearing.omnitak.plugin.LocalMapEngineHandle provides mapboxMap,
         ) {
-            app.pluginHost.mapOverlays.forEach { it.content() }
+            CompositionLocalProvider(LocalAdsbLayerVisible provides aircraftVisible) {
+                app.pluginHost.mapOverlays.forEach { it.content() }
+            }
         }
         }
 
@@ -1797,6 +1894,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             actions = buildList {
                 add(RadialAction("drop", Icons.Filled.Place, "Drop Marker"))
                 add(RadialAction("photo", Icons.Filled.PhotoCamera, "Photo Marker"))
+                add(RadialAction("voice", Icons.Filled.Mic, "Голос"))
                 add(RadialAction("sar", Icons.Filled.Flag, "Точка ПСР"))
                 add(RadialAction("measure", Icons.Filled.Straighten, "Measure"))
                 // "Navigate" removed — Android has no route-planning /
@@ -1836,6 +1934,14 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                     "photo" -> if (ll != null) {
                         photoPendingLatLng = ll
                         photoSourcePickerOpen = true
+                    }
+                    "voice" -> if (ll != null) {
+                        voicePendingLatLng = ll
+                        val need = androidx.core.content.ContextCompat.checkSelfPermission(
+                            activityContext, Manifest.permission.RECORD_AUDIO,
+                        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (need) micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        else voiceRecordDialogOpen = true
                     }
                     "sar" -> if (ll != null) sarPaletteLatLng = ll
                     // "Add" = quick-add at the long-press point — same
@@ -1985,6 +2091,44 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                             pickImageLauncher.launch("image/*")
                         }
                     }) { Text("Gallery") }
+                },
+            )
+        }
+
+        if (voiceRecordDialogOpen) {
+            AlertDialog(
+                onDismissRequest = {
+                    stopVoiceRecorder()
+                    voiceRecordDialogOpen = false
+                    voicePendingLatLng = null
+                },
+                title = { Text("Голосовая метка") },
+                text = {
+                    Text(
+                        if (voiceRecording) "Идёт запись… нажмите «Стоп и отправить»"
+                        else "Запись голоса на точке карты (CoT b-i-x-a)."
+                    )
+                },
+                confirmButton = {
+                    if (voiceRecording) {
+                        TextButton(onClick = {
+                            val ll = voicePendingLatLng
+                            val file = stopVoiceRecorder()
+                            voiceRecordDialogOpen = false
+                            voicePendingLatLng = null
+                            if (ll != null && file != null) publishVoiceAt(ll, file)
+                            else toast("Пустая запись")
+                        }) { Text("Стоп и отправить") }
+                    } else {
+                        TextButton(onClick = { startVoiceRecorder() }) { Text("Запись") }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        stopVoiceRecorder()
+                        voiceRecordDialogOpen = false
+                        voicePendingLatLng = null
+                    }) { Text("Отмена") }
                 },
             )
         }
@@ -2385,6 +2529,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 drawingsVisible = drawingsVisible,
                 trailsVisible = trailsVisible,
                 aircraftVisible = aircraftVisible,
+                vesselsVisible = vesselsVisible,
                 contactsVisible = contactsVisible,
                 callsignCardVisible = callsignCardVisible,
                 meshNodesVisible = meshNodesVisible,
@@ -2394,6 +2539,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 onToggleDrawings = { v -> mutatePref { it.copy(drawingsVisible = v) } },
                 onToggleTrails = { v -> mutatePref { it.copy(trailsVisible = v) } },
                 onToggleAircraft = { v -> mutatePref { it.copy(aircraftVisible = v) } },
+                onToggleVessels = { v -> mutatePref { it.copy(vesselsVisible = v) } },
                 onToggleContacts = { v -> mutatePref { it.copy(contactsVisible = v) } },
                 onToggleCallsignCard = { v -> mutatePref { it.copy(callsignCardVisible = v) } },
                 onToggleSarPointsOnly = { v -> sarPointsOnly = v },

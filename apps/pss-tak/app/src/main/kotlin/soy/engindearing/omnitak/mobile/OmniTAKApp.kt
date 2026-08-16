@@ -137,6 +137,11 @@ class OmniTAKApp : Application() {
                                             file, lat, lon, callsign, remarks, eventUid,
                                         )
                                     },
+                                    publishVoice = { file, lat, lon, callsign, remarks, eventUid ->
+                                        voiceMarkerManager.publishFromFileNoQueue(
+                                            file, lat, lon, callsign, remarks, eventUid,
+                                        )
+                                    },
                                 )
                             }.getOrDefault(0)
                             if (n > 0) {
@@ -691,15 +696,19 @@ class OmniTAKApp : Application() {
                         }
                     }
                 }
-                // Photo markers (`b-i-x-i` / fileshare): pull Mission Package
+                // Photo / voice markers with fileshare: pull Mission Package
                 // into local cache so the map sheet can show a preview.
-                // Lambda runs after ServerManager is live; photoMarkerManager
-                // is lazy-safe here.
                 if (event.type == soy.engindearing.omnitak.mobile.domain.PhotoMarkerPackage.IMAGE_TYPE ||
+                    event.type == soy.engindearing.omnitak.mobile.domain.VoiceMarkerPackage.AUDIO_TYPE ||
                     !event.fileshareSha256.isNullOrBlank()
                 ) {
                     appScope.launch {
-                        runCatching { photoMarkerManager.ensureCached(event) }
+                        when (event.type) {
+                            soy.engindearing.omnitak.mobile.domain.VoiceMarkerPackage.AUDIO_TYPE ->
+                                runCatching { voiceMarkerManager.ensureCached(event) }
+                            else ->
+                                runCatching { photoMarkerManager.ensureCached(event) }
+                        }
                     }
                 }
             },
@@ -750,6 +759,20 @@ class OmniTAKApp : Application() {
     /** Photo geo-markers (ATAK Quick Pic compatible `b-i-x-i` + fileshare). */
     val photoMarkerManager: soy.engindearing.omnitak.mobile.domain.PhotoMarkerManager by lazy {
         soy.engindearing.omnitak.mobile.domain.PhotoMarkerManager(
+            context = this,
+            serverManager = serverManager,
+            missionSyncManager = missionSyncManager,
+            certVault = certVault,
+            contactStore = contactStore,
+            selfCallsign = { cachedPrefs.value.callsign },
+            selfUid = { cachedPrefs.value.selfUid },
+            outgoingQueue = outgoingSendQueue,
+        )
+    }
+
+    /** Voice geo-markers (`b-i-x-a` + Marti `voice.m4a`). */
+    val voiceMarkerManager: soy.engindearing.omnitak.mobile.domain.VoiceMarkerManager by lazy {
+        soy.engindearing.omnitak.mobile.domain.VoiceMarkerManager(
             context = this,
             serverManager = serverManager,
             missionSyncManager = missionSyncManager,

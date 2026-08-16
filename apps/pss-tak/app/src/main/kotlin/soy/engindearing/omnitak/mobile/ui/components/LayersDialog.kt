@@ -34,6 +34,7 @@ fun LayersDialog(
     drawingsVisible: Boolean,
     trailsVisible: Boolean = false,
     aircraftVisible: Boolean,
+    vesselsVisible: Boolean = true,
     contactsVisible: Boolean,
     callsignCardVisible: Boolean,
     meshNodesVisible: Boolean = true,
@@ -43,6 +44,7 @@ fun LayersDialog(
     onToggleDrawings: (Boolean) -> Unit,
     onToggleTrails: (Boolean) -> Unit = {},
     onToggleAircraft: (Boolean) -> Unit,
+    onToggleVessels: (Boolean) -> Unit = {},
     onToggleContacts: (Boolean) -> Unit,
     onToggleCallsignCard: (Boolean) -> Unit,
     onToggleMeshNodes: (Boolean) -> Unit = {},
@@ -56,22 +58,23 @@ fun LayersDialog(
         containerColor = TacticalSurface,
         title = {
             Text(
-                "Map layers",
+                "Слои карты",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontFamily = FontFamily.Monospace,
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                LayerRow("3D terrain", map3dEnabled, onToggle3d)
-                LayerRow("Contacts", contactsVisible, onToggleContacts)
-                LayerRow("Mesh nodes", meshNodesVisible, onToggleMeshNodes)
+                LayerRow("3D рельеф", map3dEnabled, onToggle3d)
+                LayerRow("Контакты", contactsVisible, onToggleContacts)
+                LayerRow("Узлы mesh", meshNodesVisible, onToggleMeshNodes)
                 LayerRow("Только точки ПСР", sarPointsOnly, onToggleSarPointsOnly)
-                LayerRow("Drawings", drawingsVisible, onToggleDrawings)
+                LayerRow("Рисунки", drawingsVisible, onToggleDrawings)
                 LayerRow("Треки", trailsVisible, onToggleTrails)
-                LayerRow("Aircraft (ADSB)", aircraftVisible, onToggleAircraft)
-                LayerRow("Lat/Lon grid", gridEnabled, onToggleGrid)
-                LayerRow("Callsign card", callsignCardVisible, onToggleCallsignCard)
+                LayerRow("Воздух (ADS-B)", aircraftVisible, onToggleAircraft)
+                LayerRow("Суда (AIS)", vesselsVisible, onToggleVessels)
+                LayerRow("Сетка lat/lon", gridEnabled, onToggleGrid)
+                LayerRow("Карточка позывного", callsignCardVisible, onToggleCallsignCard)
                 if (onOpenOfflineMaps != null) {
                     TextButton(
                         onClick = onOpenOfflineMaps,
@@ -80,7 +83,7 @@ fun LayersDialog(
                             .padding(top = 4.dp),
                     ) {
                         Text(
-                            "Offline maps…",
+                            "Офлайн-карты…",
                             color = TacticalAccent,
                             fontFamily = FontFamily.Monospace,
                         )
@@ -90,7 +93,7 @@ fun LayersDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done", color = TacticalAccent)
+                Text("Готово", color = TacticalAccent)
             }
         },
     )

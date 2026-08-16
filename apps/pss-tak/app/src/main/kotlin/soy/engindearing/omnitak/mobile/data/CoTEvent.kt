@@ -113,6 +113,8 @@ data class CoTEvent(
     val fileshareFilename: String? = null,
     /** Local absolute path after we downloaded/cached the photo (send or recv). */
     val localPhotoPath: String? = null,
+    /** Local absolute path after we downloaded/cached a voice marker (`b-i-x-a`). */
+    val localAudioPath: String? = null,
 ) {
     val affiliation: CoTAffiliation
         get() {

@@ -19,8 +19,11 @@
   let drawReady = false;
   let drawnGroup = null;
   let pendingLayer = null;
+  let gridBbox = null;
   let missionsCache = [];
   let sectorsCache = [];
+  let poaBySector = {}; // uid -> weight 0..1
+  let sectorLayerGroup = null;
   let tracksEnabled = false;
   let tracksWindow = "6h";
   let tracksFilterUid = "";
@@ -33,6 +36,105 @@
   let panelOpen = false;
   let toggleBtn = null;
   let historyHooked = false;
+
+  let mediaHooked = false;
+  let mediaPopup = null;
+
+  function ensureMediaPopup() {
+    if (mediaPopup && document.body.contains(mediaPopup)) return mediaPopup;
+    mediaPopup = document.createElement("div");
+    mediaPopup.id = "psr-media-preview";
+    mediaPopup.style.cssText =
+      "display:none;position:fixed;right:16px;bottom:80px;z-index:1200;max-width:320px;background:rgba(20,20,20,.96);border:1px solid #555;border-radius:10px;padding:10px;color:#eee;font:13px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45)";
+    document.body.appendChild(mediaPopup);
+    return mediaPopup;
+  }
+
+  function closeMediaPreview() {
+    const el = ensureMediaPopup();
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
+
+  async function showMarkerMediaPreview(uid) {
+    if (!uid) return;
+    const el = ensureMediaPopup();
+    el.style.display = "block";
+    el.innerHTML = "Загрузка медиа… <button type=button id=psr-media-x style=float:right>✕</button>";
+    el.querySelector("#psr-media-x").onclick = closeMediaPreview;
+    try {
+      const res = await api("/api/psr/marker_media/" + encodeURIComponent(uid));
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        el.innerHTML = (data.error || "Нет медиа") + ' <button type=button id=psr-media-x>✕</button>';
+        el.querySelector("#psr-media-x").onclick = closeMediaPreview;
+        return;
+      }
+      const url = data.url;
+      if (data.kind === "voice") {
+        el.innerHTML =
+          "<div style=margin-bottom:6px><strong>Голос</strong> " +
+          (data.filename || "") +
+          ' <button type=button id=psr-media-x style=float:right>✕</button></div>' +
+          '<audio controls src="' +
+          url +
+          '" style="width:100%"></audio>';
+      } else {
+        el.innerHTML =
+          "<div style=margin-bottom:6px><strong>Фото</strong> " +
+          (data.filename || "") +
+          ' <button type=button id=psr-media-x style=float:right>✕</button></div>' +
+          '<img src="' +
+          url +
+          '" alt="photo" style="max-width:100%;max-height:240px;border-radius:6px" />';
+      }
+      el.querySelector("#psr-media-x").onclick = closeMediaPreview;
+    } catch (_) {
+      el.innerHTML = 'Ошибка сети <button type=button id=psr-media-x>✕</button>';
+      el.querySelector("#psr-media-x").onclick = closeMediaPreview;
+    }
+  }
+
+  function extractMarkerUid(layer) {
+    if (!layer) return null;
+    if (layer.options && layer.options.uid) return layer.options.uid;
+    if (layer.feature && layer.feature.properties) {
+      const p = layer.feature.properties;
+      if (p.uid) return p.uid;
+      if (p.id) return p.id;
+    }
+    if (layer.__psrUid) return layer.__psrUid;
+    const tip = layer.getTooltip && layer.getTooltip();
+    const content = tip && (tip.getContent ? tip.getContent() : tip._content);
+    const text = typeof content === "string" ? content : (content && content.textContent) || "";
+    const m = String(text).match(/uid[=:\s]+([\w.-]+)/i);
+    return m ? m[1] : null;
+  }
+
+  function hookMediaClicks() {
+    const map = window.__OTS_MAP__;
+    if (!map || mediaHooked) return;
+    mediaHooked = true;
+    map.on("click", async (e) => {
+      let layer = e.originalEvent && e.originalEvent.target;
+      // Prefer Leaflet layers under click
+      let hit = null;
+      map.eachLayer((ly) => {
+        if (!(ly.getLatLng && !ly.getLatLngs)) return;
+        if (!ly.getBounds && ly.getLatLng) {
+          const ll = ly.getLatLng();
+          if (ll && e.latlng && Math.abs(ll.lat - e.latlng.lat) < 0.00015 && Math.abs(ll.lng - e.latlng.lng) < 0.00015) {
+            hit = ly;
+          }
+        }
+      });
+      const uid = extractMarkerUid(hit);
+      if (!uid) return;
+      // Only fetch for likely media markers — type in options or always try cheap
+      showMarkerMediaPreview(uid);
+    });
+  }
+
   const TRACK_MIN_INTERVAL_MS = 8000;
 
   function api(path, opts) {
@@ -112,7 +214,7 @@
       draw: {
         polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: "#00bcd4" } },
         polyline: false,
-        rectangle: false,
+        rectangle: { shapeOptions: { color: "#ff9800" } },
         circle: false,
         marker: false,
         circlemarker: false,
@@ -124,7 +226,11 @@
       drawnGroup.clearLayers();
       pendingLayer = e.layer;
       drawnGroup.addLayer(pendingLayer);
-      openSaveForm();
+      if (e.layerType === "rectangle") {
+        openGridFormFromLayer(e.layer);
+      } else {
+        openSaveForm();
+      }
     });
     drawReady = true;
     return true;
@@ -142,6 +248,7 @@
       const data = await res.json();
       missionsCache = data.results || data.missions || data || [];
       if (!Array.isArray(missionsCache)) missionsCache = [];
+      fillGridMissionSelect();
     } catch (_) {
       missionsCache = [];
     }
@@ -328,14 +435,163 @@
     }
   }
 
+
+  function ensureSectorLayer() {
+    const map = window.__OTS_MAP__;
+    if (!map || !window.L) return null;
+    if (!sectorLayerGroup) {
+      sectorLayerGroup = L.layerGroup();
+      map.addLayer(sectorLayerGroup);
+    }
+    return sectorLayerGroup;
+  }
+
+  function poaColor(weight, cleared) {
+    if (cleared) return "#666666";
+    const w = Math.max(0, Math.min(1, weight || 0));
+    // low=cyan, mid=orange, high=red
+    if (w < 0.15) return "#26c6da";
+    if (w < 0.35) return "#ffb300";
+    return "#e53935";
+  }
+
+  function coordsToLatLngs(coords) {
+    if (!coords || !coords.length) return null;
+    // SearchSector stores [lat, lon]
+    return coords.map((c) => {
+      if (Array.isArray(c) && c.length >= 2) return [Number(c[0]), Number(c[1])];
+      if (c && typeof c === "object" && c.lat != null && (c.lon != null || c.lng != null)) {
+        return [c.lat, c.lon != null ? c.lon : c.lng];
+      }
+      return null;
+    }).filter(Boolean);
+  }
+
+  async function loadPoaForSectors() {
+    poaBySector = {};
+    const missions = new Set();
+    sectorsCache.forEach((s) => {
+      if (s.mission_name) missions.add(s.mission_name);
+    });
+    for (const m of missions) {
+      try {
+        const res = await api("/api/missions/" + encodeURIComponent(m) + "/poa_plan");
+        if (!res.ok) continue;
+        const data = await res.json();
+        (data.plan && data.plan.sectors || []).forEach((row) => {
+          if (row.sector_uid) poaBySector[row.sector_uid] = row;
+        });
+      } catch (_) {}
+    }
+  }
+
+  function renderSectorPolygons() {
+    const group = ensureSectorLayer();
+    if (!group) return;
+    group.clearLayers();
+    window.__OTS_PSR_SEC_MAP__ = {};
+    sectorsCache.forEach((s) => {
+      const latlngs = coordsToLatLngs(s.coordinates);
+      if (!latlngs || latlngs.length < 3) return;
+      const poa = poaBySector[s.uid] || {};
+      const cleared = s.status === "cleared" || poa.cleared;
+      const w = poa.poa_weight != null ? poa.poa_weight : 0;
+      const color = poaColor(w, cleared);
+      const poly = L.polygon(latlngs, {
+        color: color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: cleared ? 0.15 : 0.35,
+      });
+      const pct = Math.round(w * 1000) / 10;
+      poly.bindTooltip(
+        (s.name || "Сектор") +
+          (cleared ? " · пройден" : " · POA " + pct + "%") +
+          (s.assigned_to ? " · " + s.assigned_to : ""),
+        { sticky: true }
+      );
+      poly.addTo(group);
+      window.__OTS_PSR_SEC_MAP__[s.uid] = poly;
+    });
+  }
+
   async function loadSectors() {
     try {
       const res = await api("/api/search_sectors");
       if (!res.ok) return;
       const data = await res.json();
       sectorsCache = data.results || [];
+      await loadPoaForSectors();
+      renderSectorPolygons();
       renderSectorList();
     } catch (_) {}
+  }
+
+  function openGridFormFromLayer(layer) {
+    ensurePanel(true);
+    setPanelOpen(true);
+    const b = layer.getBounds();
+    gridBbox = {
+      south: b.getSouth(),
+      west: b.getWest(),
+      north: b.getNorth(),
+      east: b.getEast(),
+    };
+    const el = panel.querySelector("#psr-grid-bbox");
+    if (el) {
+      el.textContent =
+        "bbox: " +
+        gridBbox.south.toFixed(5) +
+        "…" +
+        gridBbox.north.toFixed(5) +
+        " / " +
+        gridBbox.west.toFixed(5) +
+        "…" +
+        gridBbox.east.toFixed(5);
+    }
+    fillGridMissionSelect();
+    setStatus("Прямоугольник сетки готов — нажмите «Создать сетку»");
+  }
+
+  function fillGridMissionSelect() {
+    if (!panel) return;
+    const sel = panel.querySelector("#psr-grid-mission");
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— операция —</option>';
+    missionsCache.forEach((m) => {
+      const name = m.name || m;
+      const o = document.createElement("option");
+      o.value = name;
+      o.textContent = name;
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+
+  async function createSectorGrid(bbox) {
+    if (!bbox) return setStatus("Сначала прямоугольник или «по видимой карте»");
+    const cell_m = parseFloat((panel.querySelector("#psr-grid-cell") || {}).value || 500);
+    const name_prefix = ((panel.querySelector("#psr-grid-prefix") || {}).value || "Кв").trim();
+    const mission_name = ((panel.querySelector("#psr-grid-mission") || {}).value || "").trim() || null;
+    setStatus("Создание сетки…");
+    try {
+      const res = await api("/api/search_sectors/grid", {
+        method: "POST",
+        body: JSON.stringify({ bbox, cell_m, name_prefix, mission_name, max_cells: 80 }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        return setStatus(data.error || "Ошибка сетки" + (data.would_create ? " (ячеек " + data.would_create + ")" : ""));
+      }
+      setStatus("Сетка: " + (data.created || 0) + " секторов (" + data.cols + "×" + data.rows + ")");
+      gridBbox = null;
+      if (drawnGroup) drawnGroup.clearLayers();
+      pendingLayer = null;
+      await loadSectors();
+    } catch (_) {
+      setStatus("Ошибка сети / войдите в кабинет");
+    }
   }
 
   function openSaveForm(existing) {
@@ -418,7 +674,14 @@
         "<div style='font-weight:600'>" +
         (s.name || "Сектор") +
         "</div><div style='font-size:12px;opacity:.85'>" +
-        [s.assigned_to ? "→ " + s.assigned_to : "", s.mission_name ? "оп: " + s.mission_name : "", st]
+        [
+          s.assigned_to ? "→ " + s.assigned_to : "",
+          s.mission_name ? "оп: " + s.mission_name : "",
+          st,
+          poaBySector[s.uid] && poaBySector[s.uid].poa_weight != null
+            ? "POA " + Math.round(poaBySector[s.uid].poa_weight * 1000) / 10 + "%"
+            : "",
+        ]
           .filter(Boolean)
           .join(" · ") +
         "</div>";
@@ -437,10 +700,19 @@
       const btnClear = document.createElement("button");
       btnClear.textContent = s.status === "cleared" ? "Активен" : "Пройден";
       btnClear.onclick = async () => {
+        const next = s.status === "cleared" ? "active" : "cleared";
         await api("/api/search_sectors/" + encodeURIComponent(s.uid), {
           method: "PATCH",
-          body: JSON.stringify({ status: s.status === "cleared" ? "active" : "cleared" }),
+          body: JSON.stringify({ status: next }),
         });
+        if (next === "cleared" && s.mission_name) {
+          try {
+            await api("/api/missions/" + encodeURIComponent(s.mission_name) + "/poa_plan/update_after_clear", {
+              method: "POST",
+              body: JSON.stringify({ sector_uid: s.uid }),
+            });
+          } catch (_) {}
+        }
         loadSectors();
       };
       const btnDel = document.createElement("button");
@@ -560,6 +832,8 @@
     }
     tracksEnabled = false;
     panelOpen = false;
+    closeMediaPreview();
+    mediaHooked = false;
   }
 
   function setPanelOpen(open) {
@@ -643,6 +917,21 @@
       "<a href='/api/search_sectors/export.kml' target='_blank' style='color:#8cf'>KML секторов</a>" +
       "<a id='psr-track-kml' href='#' target='_blank' style='color:#8cf;font-size:12px'>KML миссии</a>" +
       "</div></div>" +
+      "<div id='psr-grid-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
+      "<div style='font-weight:600;margin-bottom:6px'>Авто-сетка</div>" +
+      "<div class='hint' style='opacity:.75;font-size:12px;margin-bottom:6px'>Прямоугольник на карте (оранжевый) или «по видимой карте».</div>" +
+      "<select id='psr-grid-mission' style='width:100%;margin-bottom:6px;padding:6px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'></select>" +
+      "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px'>" +
+      "<select id='psr-grid-cell' style='flex:1;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'>" +
+      "<option value='250'>250 м</option><option value='500' selected>500 м</option>" +
+      "<option value='1000'>1000 м</option></select>" +
+      "<input id='psr-grid-prefix' value='Кв' placeholder='Префикс' style='width:72px;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
+      "</div>" +
+      "<div style='display:flex;gap:6px;flex-wrap:wrap'>" +
+      "<button type='button' id='psr-grid-view' style='padding:6px 8px;border:1px solid #555;background:#333;color:#eee;border-radius:4px;cursor:pointer'>По видимой карте</button>" +
+      "<button type='button' id='psr-grid-create' style='padding:6px 8px;border:0;background:#2a6;color:#fff;border-radius:4px;cursor:pointer;font-weight:600'>Создать сетку</button>" +
+      "</div>" +
+      "<div id='psr-grid-bbox' class='muted' style='margin-top:6px;font-size:11px;opacity:.8'></div></div>" +
       "<div id='psr-tracks-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<label style='display:flex;align-items:center;gap:8px;font-weight:600'>" +
       "<input type='checkbox' id='psr-tracks-on'/> Треки</label>" +
@@ -698,6 +987,23 @@
       if (tracksEnabled) loadTracks();
     };
     panel.querySelector("#psr-tracks-reload").onclick = () => loadTracks();
+    panel.querySelector("#psr-grid-view").onclick = () => {
+      const map = window.__OTS_MAP__;
+      if (!map || !map.getBounds) return setStatus("Карта не готова");
+      const b = map.getBounds();
+      gridBbox = {
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      };
+      const el = panel.querySelector("#psr-grid-bbox");
+      if (el) el.textContent = "видимая карта → bbox задан";
+      fillGridMissionSelect();
+      setStatus("Bbox = видимая карта — «Создать сетку»");
+    };
+    panel.querySelector("#psr-grid-create").onclick = () => createSectorGrid(gridBbox);
+    fillGridMissionSelect();
     setPanelOpen(!!forceBuild);
   }
 
@@ -746,6 +1052,7 @@
     ensureBar();
     if (!duePollTimer) startDuePoll();
     if (window.__OTS_MAP__ && window.L) {
+      hookMediaClicks();
       await ensureDraw();
       if (!missionsCache.length) await loadMissions();
       await loadSectors();

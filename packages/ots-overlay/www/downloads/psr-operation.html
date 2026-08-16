@@ -57,6 +57,7 @@
       <button type="button" data-tab="tasks">Задания</button>
       <button type="button" data-tab="roster">Состав</button>
       <button type="button" data-tab="period">Смена</button>
+      <button type="button" data-tab="poa">POA</button>
       <button type="button" data-tab="log">Журнал</button>
     </div>
 
@@ -74,6 +75,24 @@
             <option value="f">жен</option>
             <option value="unknown">неизв.</option>
           </select>
+        </div>
+        <div class="row">
+          <select id="s-category" title="Категория для POA">
+            <option value="">категория (POA)</option>
+            <option value="child">ребёнок</option>
+            <option value="adult">взрослый</option>
+            <option value="elderly">пожилой</option>
+            <option value="dementia">деменция / спутанность</option>
+            <option value="other">другое</option>
+          </select>
+          <select id="s-mobility" title="Мобильность для POA">
+            <option value="">мобильность</option>
+            <option value="foot">пешком</option>
+            <option value="vehicle">транспорт</option>
+            <option value="water">вода</option>
+            <option value="unknown">неизв.</option>
+          </select>
+          <span class="muted">Шаблоны весов POA — эвристика штаба, не LPB.</span>
         </div>
         <div class="row">
           <textarea id="s-clothing" placeholder="Одежда" rows="2" style="flex:1;min-width:200px"></textarea>
@@ -187,6 +206,21 @@
         </div>
       </div>
       <div id="periods-list"></div>
+    </section>
+
+    <section id="tab-poa" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">POA / POD (план штаба)</h3>
+        <p class="muted">Вероятность присутствия (POA) по секторам — ручная эвристика. После «пройден» можно перераспределить остаток. Не научный LPB (это B4).</p>
+        <div class="row">
+          <span id="poa-meta" class="muted"></span>
+          <button type="button" id="poa-reload">Обновить</button>
+          <button class="primary" type="button" id="poa-save">Сохранить веса</button>
+          <button type="button" id="poa-equal">Равномерно</button>
+        </div>
+        <textarea id="poa-notes" placeholder="Заметки к плану" rows="2" style="width:100%;margin:8px 0"></textarea>
+        <div id="poa-list"></div>
+      </div>
     </section>
 
     <section id="tab-log" class="hidden">
@@ -304,7 +338,7 @@
       btn.onclick = () => {
         document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        ['subject', 'tasks', 'roster', 'period', 'log'].forEach(t => {
+        ['subject', 'tasks', 'roster', 'period', 'poa', 'log'].forEach(t => {
           document.getElementById('tab-' + t).classList.toggle('hidden', btn.dataset.tab !== t);
         });
       };
@@ -327,6 +361,8 @@
       document.getElementById('s-place').value = (s && s.last_seen_place) || '';
       document.getElementById('s-notes').value = (s && s.notes) || '';
       document.getElementById('s-status').value = (s && s.status) || 'active';
+      document.getElementById('s-category').value = (s && s.subject_category) || '';
+      document.getElementById('s-mobility').value = (s && s.mobility) || '';
       document.getElementById('s-upload').disabled = !currentSubjectUid;
       const prev = document.getElementById('s-preview');
       const meta = document.getElementById('s-meta');
@@ -375,7 +411,9 @@
           ? new Date(document.getElementById('s-seen').value).toISOString()
           : null,
         notes: document.getElementById('s-notes').value || null,
-        status: document.getElementById('s-status').value || 'active'
+        status: document.getElementById('s-status').value || 'active',
+        subject_category: document.getElementById('s-category').value || null,
+        mobility: document.getElementById('s-mobility').value || null
       };
     }
 
@@ -798,6 +836,120 @@
     };
     document.getElementById('d-filter').onchange = loadDecisions;
 
+    let poaCache = null;
+
+    function renderPoaList(plan) {
+      const list = document.getElementById('poa-list');
+      const meta = document.getElementById('poa-meta');
+      poaCache = plan;
+      if (!plan) {
+        list.innerHTML = '<p class="muted">Нет плана</p>';
+        return;
+      }
+      meta.textContent = 'метод: ' + (plan.method || 'hq_heuristic_v1') +
+        (plan.subject_category ? ' · ' + plan.subject_category : '') +
+        (plan.mobility ? '/' + plan.mobility : '');
+      document.getElementById('poa-notes').value = plan.notes || '';
+      const sectors = plan.sectors || [];
+      if (!sectors.length) {
+        list.innerHTML = '<p class="muted">Нет секторов у операции — создайте сетку на /map</p>';
+        return;
+      }
+      list.innerHTML = '';
+      sectors.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'card';
+        row.style.padding = '10px';
+        row.style.marginBottom = '8px';
+        const name = s.sector_name || s.sector_uid;
+        const pct = Math.round((s.poa_weight || 0) * 1000) / 10;
+        row.innerHTML =
+          '<div class="row" style="align-items:center">' +
+          '<strong style="flex:1">' + name + '</strong>' +
+          '<span class="muted">' + (s.cleared || s.sector_status === 'cleared' ? 'пройден' : 'активен') + '</span>' +
+          '</div>' +
+          '<div class="row" style="align-items:center;margin-top:6px">' +
+          '<label>POA % <input type="number" min="0" max="100" step="0.1" data-i="' + i + '" class="poa-w" value="' + pct + '" style="width:90px"' +
+          (s.cleared ? ' disabled' : '') + ' /></label>' +
+          '<span class="muted">POD≈' + (Math.round((s.pod_estimate || 0) * 1000) / 10) + '%</span>' +
+          '<button type="button" data-uid="' + s.sector_uid + '" class="poa-clear-btn">Пройден → перераспределить</button>' +
+          '</div>';
+        list.appendChild(row);
+      });
+      list.querySelectorAll('.poa-clear-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const m = missionName();
+          const res = await api('/api/missions/' + encodeURIComponent(m) + '/poa_plan/update_after_clear', {
+            method: 'POST', body: JSON.stringify({ sector_uid: btn.dataset.uid })
+          });
+          const data = await res.json();
+          if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+          setStatus('POA перераспределён');
+          renderPoaList(data.plan);
+        };
+      });
+    }
+
+    async function loadPoa() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/poa_plan');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderPoaList(data.plan);
+    }
+
+    function collectPoaFromForm() {
+      if (!poaCache) return null;
+      const sectors = (poaCache.sectors || []).map((s, i) => {
+        const inp = document.querySelector('.poa-w[data-i="' + i + '"]');
+        let w = s.poa_weight || 0;
+        if (inp && !inp.disabled) w = (parseFloat(inp.value) || 0) / 100;
+        return {
+          sector_uid: s.sector_uid,
+          poa_weight: w,
+          pod_estimate: w,
+          method: s.method || 'hq_heuristic_v1',
+          cleared: !!s.cleared
+        };
+      });
+      return {
+        method: poaCache.method || 'hq_heuristic_v1',
+        notes: document.getElementById('poa-notes').value || null,
+        subject_category: poaCache.subject_category || document.getElementById('s-category').value || null,
+        mobility: poaCache.mobility || document.getElementById('s-mobility').value || null,
+        sectors
+      };
+    }
+
+    document.getElementById('poa-reload').onclick = loadPoa;
+    document.getElementById('poa-save').onclick = async () => {
+      const m = missionName();
+      const body = collectPoaFromForm();
+      if (!m || !body) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/poa_plan', {
+        method: 'PUT', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('POA сохранён');
+      renderPoaList(data.plan);
+    };
+    document.getElementById('poa-equal').onclick = () => {
+      const inputs = [...document.querySelectorAll('.poa-w:not([disabled])')];
+      if (!inputs.length) return;
+      const eq = Math.round((100 / inputs.length) * 10) / 10;
+      inputs.forEach(inp => { inp.value = eq; });
+    };
+
+    // load POA when switching to tab
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      const prev = btn.onclick;
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab === 'poa') loadPoa();
+      });
+    });
+
     async function refreshAll() {
       await loadSectors();
       await loadSubject();
@@ -805,6 +957,7 @@
       await loadRoster();
       await loadPeriods();
       await loadDecisions();
+      await loadPoa();
       await loadDueBanner();
       startDuePoll();
     }

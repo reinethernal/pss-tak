@@ -17,6 +17,9 @@ install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"
+if [[ -f "$ROOT/site-packages/blueprints/scheduled_jobs.py" ]]; then
+  install -m 644 "$ROOT/site-packages/blueprints/scheduled_jobs.py" "$SITE_PKG/blueprints/"
+fi
 
 echo "==> Web assets / downloads"
 install -d "$WWW/assets/js" "$WWW/downloads"
