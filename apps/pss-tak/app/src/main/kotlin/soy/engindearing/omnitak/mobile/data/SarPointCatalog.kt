@@ -53,7 +53,7 @@ object SarPointCatalog {
     private val entries: Map<Kind, SarPoint> = mapOf(
         Kind.LKP to SarPoint(
             kind = Kind.LKP,
-            labelRu = "LKP — последнее известное",
+            labelRu = "Последнее известное",
             labelEn = "Last Known Point",
             image = Icons.Filled.Place,
             accent = Color(0xFFE91E63),
@@ -61,7 +61,7 @@ object SarPointCatalog {
         ),
         Kind.PLS to SarPoint(
             kind = Kind.PLS,
-            labelRu = "PLS — где видели",
+            labelRu = "Где видели",
             labelEn = "Place Last Seen",
             image = Icons.Filled.Visibility,
             accent = Color(0xFF9C27B0),
@@ -69,7 +69,7 @@ object SarPointCatalog {
         ),
         Kind.IPP to SarPoint(
             kind = Kind.IPP,
-            labelRu = "IPP — старт планирования",
+            labelRu = "Старт планирования",
             labelEn = "Initial Planning Point",
             image = Icons.Filled.Flag,
             accent = Color(0xFF2196F3),

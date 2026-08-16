@@ -64,7 +64,7 @@ fun LayersDialog(
                 LayerRow("3D terrain", map3dEnabled, onToggle3d)
                 LayerRow("Contacts", contactsVisible, onToggleContacts)
                 LayerRow("Mesh nodes", meshNodesVisible, onToggleMeshNodes)
-                LayerRow("ПСР точки only", sarPointsOnly, onToggleSarPointsOnly)
+                LayerRow("Только точки ПСР", sarPointsOnly, onToggleSarPointsOnly)
                 LayerRow("Drawings", drawingsVisible, onToggleDrawings)
                 LayerRow("Aircraft (ADSB)", aircraftVisible, onToggleAircraft)
                 LayerRow("Lat/Lon grid", gridEnabled, onToggleGrid)

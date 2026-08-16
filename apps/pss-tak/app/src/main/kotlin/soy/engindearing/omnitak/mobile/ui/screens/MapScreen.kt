@@ -1615,7 +1615,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 ToolEntry("chat", Icons.Filled.Chat, "Chat"),
                 ToolEntry("missionsync", Icons.Filled.Sync, "Mission Sync"),
                 ToolEntry("fema", Icons.Filled.LocalFireDepartment, "FEMA / IC"),
-                ToolEntry("sar", Icons.Filled.Flag, "ПСР точки"),
+                ToolEntry("sar", Icons.Filled.Flag, "Точки ПСР"),
                 ToolEntry("teams", Icons.Filled.Groups, "Teams"),
                 ToolEntry(
                     "nav",
@@ -1783,7 +1783,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             actions = buildList {
                 add(RadialAction("drop", Icons.Filled.Place, "Drop Marker"))
                 add(RadialAction("photo", Icons.Filled.PhotoCamera, "Photo Marker"))
-                add(RadialAction("sar", Icons.Filled.Flag, "SAR Point"))
+                add(RadialAction("sar", Icons.Filled.Flag, "Точка ПСР"))
                 add(RadialAction("measure", Icons.Filled.Straighten, "Measure"))
                 // "Navigate" removed — Android has no route-planning /
                 // turn-by-turn engine yet (iOS executeNavigate rides
@@ -2230,8 +2230,11 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         lat = ll.latitude,
                         lon = ll.longitude,
                         hae = 0.0,
-                        callsign = picked.name.ifBlank { picked.point.kind.callsign },
-                        remarks = remarks,
+                        // Wire callsign stays LKP/PLS/… for ATAK/HQ filters
+                        callsign = picked.point.kind.callsign,
+                        remarks = remarks +
+                            (if (picked.name.isNotBlank() && picked.name != picked.point.labelRu)
+                                " ${picked.name}" else ""),
                         colorArgb = colorArgb,
                         source = soy.engindearing.omnitak.mobile.data.CoTSource.LOCAL,
                     )
@@ -2242,7 +2245,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         runCatching { app.serverManager.sendCoT(xml) }
                         runCatching { app.activeMeshManager.sendCoTOverMesh(event) }
                     }
-                    toast("ПСР: ${picked.point.kind.callsign} «${event.callsign}»")
+                    toast("ПСР: ${picked.point.labelRu}")
                 }
                 sarPaletteLatLng = null
             },

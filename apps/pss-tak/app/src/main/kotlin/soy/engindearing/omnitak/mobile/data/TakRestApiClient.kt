@@ -183,6 +183,25 @@ class TakRestApiClient(
         if (code !in 200..299) throw ApiException(httpReason(code, body))
     }
 
+    /**
+     * OTS ПСР: задания операции (`GET /api/missions/{name}/tasks`).
+     * Empty on dialects without the route; requires Basic auth + mTLS like other /api.
+     */
+    fun getMissionTasks(missionName: String): List<TakMissionTask> {
+        val (code, body) = httpGet("/api/missions/${urlSegment(missionName)}/tasks")
+        if (code == 404) return emptyList()
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseMissionTasks(body)
+    }
+
+    /** OTS ПСР: состав выезда (`GET /api/missions/{name}/roster`), read-only in the field client. */
+    fun getMissionRoster(missionName: String): List<TakMissionRosterEntry> {
+        val (code, body) = httpGet("/api/missions/${urlSegment(missionName)}/roster")
+        if (code == 404) return emptyList()
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseMissionRoster(body)
+    }
+
     // ------------------------------------------------------------------
     // JSON parsing — tolerant of the three envelope shapes.
     // ------------------------------------------------------------------
@@ -213,6 +232,43 @@ class TakRestApiClient(
                 mimeType = o.str("mimeType") ?: o.str("MIMEType"),
                 size = o.long("size") ?: o.long("Size") ?: 0L,
                 submitter = o.str("submitter") ?: o.str("SubmissionUser"),
+            )
+        }
+    }
+
+    internal fun parseMissionTasks(body: String): List<TakMissionTask> {
+        val arr = listEnvelope(body) ?: return emptyList()
+        return arr.mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val uid = o.str("uid") ?: return@mapNotNull null
+            val title = o.str("title") ?: return@mapNotNull null
+            TakMissionTask(
+                uid = uid,
+                title = title,
+                body = o.str("body"),
+                assignee = o.str("assignee"),
+                sectorUid = o.str("sector_uid"),
+                returnBy = o.str("return_by"),
+                status = o.str("status") ?: "issued",
+            )
+        }
+    }
+
+    internal fun parseMissionRoster(body: String): List<TakMissionRosterEntry> {
+        val arr = listEnvelope(body) ?: return emptyList()
+        return arr.mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val uid = o.str("uid") ?: return@mapNotNull null
+            val displayName = o.str("display_name") ?: return@mapNotNull null
+            TakMissionRosterEntry(
+                uid = uid,
+                displayName = displayName,
+                callsign = o.str("callsign"),
+                phone = o.str("phone"),
+                transport = o.str("transport"),
+                skills = o.str("skills"),
+                roleOnOp = o.str("role_on_op"),
+                status = o.str("status") ?: "expected",
             )
         }
     }
@@ -495,4 +551,27 @@ data class TakDataPackageInfo(
     val mimeType: String? = null,
     val size: Long = 0L,
     val submitter: String? = null,
+)
+
+/** Штабное задание операции (OTS `/api/missions/.../tasks`). */
+data class TakMissionTask(
+    val uid: String,
+    val title: String,
+    val body: String? = null,
+    val assignee: String? = null,
+    val sectorUid: String? = null,
+    val returnBy: String? = null,
+    val status: String = "issued",
+)
+
+/** Участник состава выезда (OTS `/api/missions/.../roster`). */
+data class TakMissionRosterEntry(
+    val uid: String,
+    val displayName: String,
+    val callsign: String? = null,
+    val phone: String? = null,
+    val transport: String? = null,
+    val skills: String? = null,
+    val roleOnOp: String? = null,
+    val status: String = "expected",
 )

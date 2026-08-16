@@ -69,7 +69,7 @@ fun SarPointPaletteSheet(
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var picked by remember { mutableStateOf<SarPointCatalog.SarPoint?>(null) }
-    var name by remember(picked) { mutableStateOf(picked?.kind?.callsign ?: "") }
+    var name by remember(picked) { mutableStateOf(picked?.labelRu ?: "") }
     var remarksExtra by remember { mutableStateOf("") }
 
     ModalBottomSheet(
@@ -91,14 +91,14 @@ fun SarPointPaletteSheet(
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                "LKP / PLS / IPP / проверено / опасность / сборка",
+                "Последнее известное · где видели · старт · проверено · опасность · сборка",
                 color = Color(0xFFFFEB3B),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Text(
-                "На карте штаба фильтруются по префиксу remarks «psr:…».",
+                "На карте штаба фильтруются по метке remarks «psr:…». На проводе callsign остаётся LKP/PLS/…",
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
@@ -170,7 +170,7 @@ fun SarPointPaletteSheet(
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
                     Text(
-                        "Поставить ${selected.kind.callsign}",
+                        "Поставить «${selected.labelRu}»",
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -213,18 +213,18 @@ private fun SarTile(
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            text = point.kind.callsign,
+            text = point.labelRu,
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
+            maxLines = 2,
         )
         Text(
-            text = point.labelRu.substringAfter("— ").ifBlank { point.labelEn },
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            text = point.kind.callsign,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
             fontSize = 9.sp,
             textAlign = TextAlign.Center,
-            maxLines = 2,
         )
     }
 }

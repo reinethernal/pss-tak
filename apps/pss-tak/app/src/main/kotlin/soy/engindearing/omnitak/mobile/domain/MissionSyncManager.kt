@@ -12,6 +12,8 @@ import soy.engindearing.omnitak.mobile.data.CertVault
 import soy.engindearing.omnitak.mobile.data.TAKServer
 import soy.engindearing.omnitak.mobile.data.TakDataPackageInfo
 import soy.engindearing.omnitak.mobile.data.TakMissionInfo
+import soy.engindearing.omnitak.mobile.data.TakMissionRosterEntry
+import soy.engindearing.omnitak.mobile.data.TakMissionTask
 import soy.engindearing.omnitak.mobile.data.TakRestApiClient
 
 /**
@@ -166,6 +168,27 @@ class MissionSyncManager(
         return result
     }
 
+    /**
+     * Задания + состав выезда активной операции (OTS ПСР API).
+     * Пустые списки, если сервер не OTS или маршрут недоступен.
+     */
+    suspend fun fetchMissionOps(
+        serverId: String,
+        missionName: String,
+    ): Result<MissionOpsSnapshot> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val client = TakRestApiClient(sv, certVault)
+                MissionOpsSnapshot(
+                    tasks = runCatching { client.getMissionTasks(missionName) }.getOrDefault(emptyList()),
+                    roster = runCatching { client.getMissionRoster(missionName) }.getOrDefault(emptyList()),
+                )
+            }
+        }
+    }
+
     /** Refresh a single server (tap-to-retry on its row). */
     suspend fun refresh(serverId: String) {
         val sv = enabledServers().firstOrNull { it.id == serverId } ?: return
@@ -243,6 +266,11 @@ data class AggregatedPackage(
 ) {
     val id: String get() = "$serverId:${pkg.hash}"
 }
+
+data class MissionOpsSnapshot(
+    val tasks: List<TakMissionTask> = emptyList(),
+    val roster: List<TakMissionRosterEntry> = emptyList(),
+)
 
 /**
  * Result of [MissionSyncManager.uploadDataPackage]. Wire-shape design

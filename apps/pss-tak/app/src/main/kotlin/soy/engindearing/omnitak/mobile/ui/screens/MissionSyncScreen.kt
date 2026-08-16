@@ -63,8 +63,11 @@ import kotlinx.coroutines.launch
 import soy.engindearing.omnitak.mobile.OmniTAKApp
 import soy.engindearing.omnitak.mobile.domain.AggregatedMission
 import soy.engindearing.omnitak.mobile.domain.AggregatedPackage
+import soy.engindearing.omnitak.mobile.domain.MissionOpsSnapshot
 import soy.engindearing.omnitak.mobile.domain.MissionServerStatus
 import soy.engindearing.omnitak.mobile.domain.ServerSyncSession
+import soy.engindearing.omnitak.mobile.data.TakMissionRosterEntry
+import soy.engindearing.omnitak.mobile.data.TakMissionTask
 import soy.engindearing.omnitak.mobile.i18n.Loc
 import soy.engindearing.omnitak.mobile.ui.theme.HostileRed
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalAccent
@@ -94,6 +97,9 @@ fun MissionSyncScreen(onBack: () -> Unit = {}) {
     // status display while these Marti write APIs sat unwired.
     var newMissionOpen by remember { mutableStateOf(false) }
     var attachTarget by remember { mutableStateOf<AggregatedPackage?>(null) }
+    var missionDetail by remember { mutableStateOf<AggregatedMission?>(null) }
+    var missionOps by remember { mutableStateOf<MissionOpsSnapshot?>(null) }
+    var missionOpsLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { manager.refreshAll() }
 
@@ -172,8 +178,27 @@ fun MissionSyncScreen(onBack: () -> Unit = {}) {
             }
 
             if (allMissions.isNotEmpty()) {
-                item { SectionHeader("MISSIONS", "${allMissions.size}") }
-                items(allMissions, key = { it.id }) { m -> MissionRow(m) }
+                item { SectionHeader("МИССИИ", "${allMissions.size}") }
+                items(allMissions, key = { it.id }) { m ->
+                    MissionRow(
+                        m,
+                        onTap = {
+                            missionDetail = m
+                            missionOps = null
+                            missionOpsLoading = true
+                            scope.launch {
+                                manager.fetchMissionOps(m.serverId, m.mission.name).fold(
+                                    onSuccess = { missionOps = it },
+                                    onFailure = {
+                                        missionOps = MissionOpsSnapshot()
+                                        toast(it.message ?: "Не удалось загрузить задания")
+                                    },
+                                )
+                                missionOpsLoading = false
+                            }
+                        },
+                    )
+                }
             }
 
             if (allPackages.isNotEmpty()) {
@@ -268,6 +293,25 @@ fun MissionSyncScreen(onBack: () -> Unit = {}) {
                         Text(Loc.t("common.cancel"), color = TacticalAccent)
                     }
                 },
+            )
+        }
+    }
+
+    missionDetail?.let { m ->
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = {
+                missionDetail = null
+                missionOps = null
+            },
+            sheetState = sheetState,
+            containerColor = TacticalSurface,
+        ) {
+            MissionOpsSheet(
+                missionName = m.mission.name,
+                serverName = m.serverName,
+                loading = missionOpsLoading,
+                ops = missionOps,
             )
         }
     }
@@ -457,12 +501,13 @@ private fun statusLine(s: ServerSyncSession): String = when (val st = s.status) 
 }
 
 @Composable
-private fun MissionRow(item: AggregatedMission) {
+private fun MissionRow(item: AggregatedMission, onTap: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(TacticalSurface)
+            .clickable(onClick = onTap)
             .padding(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -495,6 +540,172 @@ private fun MissionRow(item: AggregatedMission) {
             )
         }
     }
+}
+
+@Composable
+private fun MissionOpsSheet(
+    missionName: String,
+    serverName: String,
+    loading: Boolean,
+    ops: MissionOpsSnapshot?,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 28.dp),
+    ) {
+        Text(
+            missionName,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Text(
+            serverName,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(16.dp))
+        if (loading) {
+            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = TacticalAccent, strokeWidth = 2.dp)
+            }
+            return
+        }
+        val tasks = ops?.tasks.orEmpty()
+        val roster = ops?.roster.orEmpty()
+        Text(
+            "ЗАДАНИЯ (${tasks.size})",
+            color = TacticalAccent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (tasks.isEmpty()) {
+            Text(
+                "Нет заданий от штаба",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            tasks.forEach { TaskCard(it) }
+        }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "СОСТАВ (${roster.size})",
+            color = TacticalAccent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (roster.isEmpty()) {
+            Text(
+                "Состав ещё не заполнен",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            roster.forEach { RosterCard(it) }
+        }
+    }
+}
+
+@Composable
+private fun TaskCard(task: TakMissionTask) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(TacticalBackground)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                task.title,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                taskStatusRu(task.status),
+                color = if (task.status == "overdue") HostileRed else TacticalAccent,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        task.assignee?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(4.dp))
+            Text("Кому: $it", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+        }
+        task.returnBy?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(2.dp))
+            Text("Срок: $it", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+        }
+        task.sectorUid?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(2.dp))
+            Text("Сектор: $it", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
+        }
+        task.body?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(6.dp))
+            Text(it, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun RosterCard(entry: TakMissionRosterEntry) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(TacticalBackground)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                entry.displayName,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                rosterStatusRu(entry.status),
+                color = TacticalAccent,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        val bits = listOfNotNull(
+            entry.callsign?.takeIf { it.isNotBlank() }?.let { "Позывной: $it" },
+            entry.roleOnOp?.takeIf { it.isNotBlank() }?.let { "Роль: $it" },
+            entry.phone?.takeIf { it.isNotBlank() }?.let { "Тел: $it" },
+            entry.transport?.takeIf { it.isNotBlank() }?.let { "Транспорт: $it" },
+            entry.skills?.takeIf { it.isNotBlank() }?.let { "Навыки: $it" },
+        )
+        bits.forEach {
+            Spacer(Modifier.height(2.dp))
+            Text(it, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun taskStatusRu(status: String): String = when (status) {
+    "issued" -> "выдано"
+    "acked" -> "принято"
+    "done" -> "выполнено"
+    "overdue" -> "просрочено"
+    else -> status
+}
+
+private fun rosterStatusRu(status: String): String = when (status) {
+    "expected" -> "ожидается"
+    "arrived" -> "прибыл"
+    "deployed" -> "в поле"
+    "returned" -> "вернулся"
+    else -> status
 }
 
 @Composable
