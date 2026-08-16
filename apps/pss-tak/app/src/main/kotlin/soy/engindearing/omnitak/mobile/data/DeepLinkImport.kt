@@ -43,6 +43,8 @@ data class ImportedServerConfig(
     // self-signed and publicly-trusted (Let's Encrypt) endpoints. Override
     // with trust=ca / trustselfsigned=false on the link for strict validation.
     val trustSelfSigned: Boolean = true,
+    /** Optional Unified SAR field role from invite (`role=SEARCHER|LEAD|FIELD_HQ`). */
+    val fieldRole: String? = null,
 ) {
     /**
      * A TLS server with username + password can't connect with bare creds —
@@ -165,6 +167,7 @@ object DeepLinkImport {
         val trustSelfSigned = trustRaw !in setOf("false", "ca", "system", "0", "no")
 
         val name = uri.getQueryParameter("name")?.takeIf { it.isNotBlank() } ?: host
+        val fieldRole = uri.getQueryParameter("role")?.takeIf { it.isNotBlank() }
 
         return ImportedServerConfig(
             name = name,
@@ -175,6 +178,7 @@ object DeepLinkImport {
             password = token,         // token = the enrollment Basic-auth secret
             enrollmentPort = enrollmentPort,
             trustSelfSigned = trustSelfSigned,
+            fieldRole = fieldRole,
         )
     }
 

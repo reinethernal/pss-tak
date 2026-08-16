@@ -79,6 +79,7 @@ class ConfigProfileStore(
             broadcastOverMesh = prefs.broadcastOverMesh,
             meshBroadcastIntervalSecs = prefs.meshBroadcastIntervalSecs,
             meshNodesLayerVisible = prefs.meshNodesLayerVisible,
+            fieldRole = prefs.fieldRole.name,
         )
 
         saveProfile(profile)
@@ -113,6 +114,7 @@ class ConfigProfileStore(
                 broadcastOverMesh = profile.broadcastOverMesh,
                 meshBroadcastIntervalSecs = profile.meshBroadcastIntervalSecs.coerceIn(30, 60),
                 meshNodesLayerVisible = profile.meshNodesLayerVisible,
+                fieldRole = FieldRole.fromRaw(profile.fieldRole),
                 // Callsign intentionally preserved — teammates keep their own.
                 // Self-fix, selfUid, selfLat/Lon/Hae, camera prefs also preserved.
             )

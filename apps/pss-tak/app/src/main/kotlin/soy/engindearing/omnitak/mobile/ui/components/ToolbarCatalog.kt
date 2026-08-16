@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +83,7 @@ object ToolbarCatalog {
         BarItem("settings", "Settings", Icons.Filled.Settings, cSettings, BarKind.Destination("settings")),
         BarItem("uas", "Vehicles", Icons.Filled.FlightTakeoff, cChat, BarKind.Destination("uas")),
         BarItem("onvif", "Camera", Icons.Filled.Videocam, cCamera, BarKind.Destination("onvif")),
+        BarItem("missionsync", "Выезд", Icons.Filled.Sync, cChat, BarKind.Destination("missionsync")),
     )
 
     /** Commands — open the Tools popup, start lasso, or flip 2D/3D. */
@@ -95,7 +97,7 @@ object ToolbarCatalog {
 
     /** Default layout — matches the original hardcoded NavTabs so existing
      *  users see no change until they customize. */
-    val defaultIds: List<String> = listOf("map", "chat", "servers", "mesh", "tools", "settings")
+    val defaultIds: List<String> = listOf("map", "chat", "missionsync", "mesh", "tools", "settings")
 
     fun item(id: String): BarItem? = all.firstOrNull { it.id == id }
 

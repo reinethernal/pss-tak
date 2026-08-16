@@ -228,6 +228,12 @@ class MainActivity : ComponentActivity() {
                         caCertificateName = enrolled.caCertificateName,
                     ),
                 )
+                cfg.fieldRole?.let { roleRaw ->
+                    val role = soy.engindearing.omnitak.mobile.data.FieldRole.fromRaw(roleRaw)
+                    launch {
+                        app.userPrefsStore.update { it.copy(fieldRole = role) }
+                    }
+                }
                 Log.i("OmniTAK", "Enrolled + added server '${cfg.name}' from $uri")
                 Toast.makeText(
                     this@MainActivity,

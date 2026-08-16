@@ -63,15 +63,15 @@
           '<a class="btn" href="' + (d.truststore || '/downloads/truststore-root.p12') + '">Скачать truststore-root.p12</a>' +
           '<a class="btn secondary" href="' + (d.atak_config || '/downloads/psr-atak-config.zip') + '">Настройки ATAK (zip)</a>' +
           '<p class="muted">Пароль P12 при импорте: <strong>atakatak</strong></p>' +
-          '<h2 style="font-size:1.05rem;margin:16px 0 8px">3. Enrollment в ATAK</h2>' +
-          '<a class="btn" href="' + data.qr_string + '">Открыть enrollment в ATAK</a>' +
+          '<h2 style="font-size:1.05rem;margin:16px 0 8px">3. Enrollment</h2>' +
+          '<a class="btn" href="' + data.qr_string + '">Открыть enrollment (PSS TAK / ATAK)</a>' +
           '<p class="muted mono" style="margin-top:8px">' + data.qr_string + '</p>' +
           '<h2 style="font-size:1.05rem;margin:16px 0 8px">Кратко</h2>' +
           '<ul class="muted">' +
-          '<li>Установите ATAK CIV (магазин) или PSS TAK из ссылки выше.</li>' +
-          '<li>Импортируйте zip настроек или нажмите enrollment.</li>' +
-          '<li>Введите логин <strong>' + data.username + '</strong> и пароль от штаба.</li>' +
-          '<li>ICU: в настройках трансляции — тот же логин/пароль OTS; путь стрима можно оставить psr.</li>' +
+          '<li><strong>Основное:</strong> установите PSS TAK, нажмите enrollment, режим «Поисковик».</li>' +
+          '<li>ATAK CIV — опция (zip настроек выше), если штаб просит.</li>' +
+          '<li>Логин <strong>' + data.username + '</strong>, пароль учётки — от штаба отдельно.</li>' +
+          '<li>ICU: тот же логин/пароль OTS; путь стрима можно оставить psr.</li>' +
           '</ul>';
       } catch (e) {
         status.innerHTML = '<span class="err">Ошибка сети</span>';

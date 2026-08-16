@@ -61,6 +61,9 @@ data class ConfigProfile(
     val broadcastOverMesh: Boolean = true,
     val meshBroadcastIntervalSecs: Int = 30,
     val meshNodesLayerVisible: Boolean = true,
+
+    /** Unified SAR field role pushed from HQ profile (SEARCHER/LEAD/FIELD_HQ). */
+    val fieldRole: String = "SEARCHER",
 )
 
 /**

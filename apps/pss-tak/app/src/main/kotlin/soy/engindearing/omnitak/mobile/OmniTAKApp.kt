@@ -82,6 +82,29 @@ class OmniTAKApp : Application() {
             userPrefsStore.prefs.collect { cachedPrefs.value = it }
         }
 
+        // Unified SAR — poll mission tasks and raise local notifications
+        // for new / overdue assignments (when enrolled on an OTS server).
+        appScope.launch {
+            val notifier = soy.engindearing.omnitak.mobile.domain.PsrTaskNotifier(this@OmniTAKApp)
+            var previous = emptyList<soy.engindearing.omnitak.mobile.data.TakMissionTask>()
+            while (true) {
+                kotlinx.coroutines.delay(60_000L)
+                runCatching { missionSyncManager.refreshAll() }
+                val sessions = missionSyncManager.sessions.value
+                val online = sessions.filter { it.status.isOnline }
+                if (online.isEmpty()) continue
+                val allTasks = mutableListOf<soy.engindearing.omnitak.mobile.data.TakMissionTask>()
+                for (s in online) {
+                    for (m in s.missions) {
+                        val ops = missionSyncManager.fetchMissionOps(s.serverId, m.name).getOrNull()
+                        if (ops != null) allTasks += ops.tasks
+                    }
+                }
+                if (previous.isNotEmpty()) notifier.notifyDiff(previous, allTasks)
+                previous = allTasks
+            }
+        }
+
         // #119 — Restore locally-dropped markers from the previous session,
         // then keep the persisted blob in sync with any future changes.
         // The collect loop re-persists only the "local-*" subset so that
