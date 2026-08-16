@@ -53,6 +53,8 @@ class ServerManager(
     // gateway is wired (the default). The relay itself enforces enabled / both-
     // transports-connected / throttle, so this fires unconditionally.
     private val inboundRelay: ((CoTEvent) -> Unit)? = null,
+    /** Offline outbox — markers queued when sendCoT cannot reach a server. */
+    var outgoingQueue: OutgoingSendQueue? = null,
     // Injected scope lets unit tests substitute a TestScope/StandardTestDispatcher
     // so coroutines run under test-scheduler control (advanceUntilIdle / runCurrent).
     // Production callers omit this and get the default app-wide scope.
@@ -289,19 +291,32 @@ class ServerManager(
      * every connected server (group chat, PPLI, markers); with a specific id
      * it routes to just that server (DM replies stay on their origin server).
      * Returns true if at least one server accepted the write.
+     * When [enqueueIfOffline] is true and nothing accepts the write, the XML
+     * is stored in [outgoingQueue] for flush on reconnect.
      */
-    suspend fun sendCoT(xml: String, serverId: String? = null): Boolean {
+    suspend fun sendCoT(
+        xml: String,
+        serverId: String? = null,
+        enqueueIfOffline: Boolean = true,
+    ): Boolean {
         val targets = if (serverId != null) {
             listOfNotNull(connections[serverId])
         } else {
             connections.values.toList()
         }
-        if (targets.isEmpty()) return false
+        if (targets.isEmpty()) {
+            if (enqueueIfOffline) outgoingQueue?.enqueueCot(xml)
+            return false
+        }
         var anyOk = false
         for (conn in targets) {
             if (conn.send(xml)) anyOk = true
         }
-        if (anyOk) _messagesSent.update { it + 1 }
+        if (anyOk) {
+            _messagesSent.update { it + 1 }
+        } else if (enqueueIfOffline) {
+            outgoingQueue?.enqueueCot(xml)
+        }
         return anyOk
     }
 

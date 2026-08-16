@@ -24,6 +24,7 @@ class PhotoMarkerManager(
     private val contactStore: ContactStore,
     private val selfCallsign: () -> String,
     private val selfUid: () -> String,
+    private val outgoingQueue: OutgoingSendQueue? = null,
 ) {
     private val cacheDir: File
         get() = File(context.filesDir, "photo_markers").also { if (!it.exists()) it.mkdirs() }
@@ -33,6 +34,7 @@ class PhotoMarkerManager(
 
     sealed class PublishResult {
         data class Ok(val event: CoTEvent, val hash: String) : PublishResult()
+        data class Queued(val event: CoTEvent) : PublishResult()
         data class Failed(val reason: String) : PublishResult()
     }
 
@@ -81,8 +83,10 @@ class PhotoMarkerManager(
         lon: Double,
         callsign: String,
         remarks: String,
+        allowQueue: Boolean = true,
+        existingUid: String? = null,
     ): PublishResult {
-        val uid = CotBuilders.newUid()
+        val uid = existingUid?.takeIf { it.isNotBlank() } ?: CotBuilders.newUid()
         val zip = PhotoMarkerPackage.buildZip(uid, jpegBytes)
         val creatorUid = selfUid().ifBlank { uid }
         val upload = missionSyncManager.uploadDataPackage(
@@ -92,10 +96,34 @@ class PhotoMarkerManager(
         )
         val hash = when (upload) {
             is UploadOutcome.Hash -> upload.hash
-            is UploadOutcome.NoServer ->
-                return PublishResult.Failed("No connected server for photo upload")
-            is UploadOutcome.Failed ->
-                return PublishResult.Failed(upload.reason)
+            is UploadOutcome.NoServer, is UploadOutcome.Failed -> {
+                if (allowQueue && outgoingQueue != null) {
+                    outgoingQueue.enqueuePhoto(
+                        jpegBytes, lat, lon, callsign, remarks, eventUid = uid,
+                    )
+                    val localFile = PhotoMarkerPackage.cacheFile(cacheDir, uid)
+                    localFile.writeBytes(jpegBytes)
+                    val event = CoTEvent(
+                        uid = uid,
+                        type = PhotoMarkerPackage.IMAGE_TYPE,
+                        lat = lat,
+                        lon = lon,
+                        callsign = callsign.ifBlank { "Photo" },
+                        remarks = remarks,
+                        source = CoTSource.LOCAL,
+                        localPhotoPath = localFile.absolutePath,
+                    )
+                    contactStore.ingest(event)
+                    return PublishResult.Queued(event)
+                }
+                return when (upload) {
+                    is UploadOutcome.NoServer ->
+                        PublishResult.Failed("No connected server for photo upload")
+                    is UploadOutcome.Failed ->
+                        PublishResult.Failed(upload.reason)
+                    else -> PublishResult.Failed("upload failed")
+                }
+            }
         }
         val server = serverManager.servers.value.firstOrNull { it.enabled }
             ?: serverManager.servers.value.firstOrNull()
@@ -132,8 +160,30 @@ class PhotoMarkerManager(
             senderUid = creatorUid,
             senderCallsign = selfCallsign().ifBlank { event.callsign ?: "PSS" },
         )
-        runCatching { serverManager.sendCoT(xml) }
+        runCatching { serverManager.sendCoT(xml, enqueueIfOffline = allowQueue) }
         return PublishResult.Ok(event, hash)
+    }
+
+    /** Used by [OutgoingSendQueue.flush] — never re-queues on failure. */
+    suspend fun publishFromFileNoQueue(
+        file: File,
+        lat: Double,
+        lon: Double,
+        callsign: String = "Photo",
+        remarks: String = "",
+        eventUid: String = "",
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (!file.isFile) return@withContext false
+        when (
+            publishBytes(
+                file.readBytes(), lat, lon, callsign, remarks,
+                allowQueue = false,
+                existingUid = eventUid,
+            )
+        ) {
+            is PublishResult.Ok -> true
+            else -> false
+        }
     }
 
     /**

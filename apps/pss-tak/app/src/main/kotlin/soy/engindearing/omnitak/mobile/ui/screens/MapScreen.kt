@@ -352,6 +352,8 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             when (result) {
                 is PhotoMarkerManager.PublishResult.Ok ->
                     toast("Photo marker sent (${result.hash.take(8)}…)")
+                is PhotoMarkerManager.PublishResult.Queued ->
+                    toast("Photo queued — will upload when online")
                 is PhotoMarkerManager.PublishResult.Failed ->
                     toast("Photo failed: ${result.reason}")
             }

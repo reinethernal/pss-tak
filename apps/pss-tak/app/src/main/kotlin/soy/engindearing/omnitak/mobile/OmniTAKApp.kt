@@ -123,6 +123,26 @@ class OmniTAKApp : Application() {
                                 TAKConnectionService.start(this@OmniTAKApp, state.serverName)
                             }
                         }
+                        // Flush offline marker/photo outbox once a server is up.
+                        appScope.launch {
+                            delay(1500)
+                            if (serverManager.connectionState.value !is ConnectionState.Connected) return@launch
+                            val n = runCatching {
+                                outgoingSendQueue.flush(
+                                    sendCot = { xml ->
+                                        serverManager.sendCoT(xml, enqueueIfOffline = false)
+                                    },
+                                    publishPhoto = { file, lat, lon, callsign, remarks, eventUid ->
+                                        photoMarkerManager.publishFromFileNoQueue(
+                                            file, lat, lon, callsign, remarks, eventUid,
+                                        )
+                                    },
+                                )
+                            }.getOrDefault(0)
+                            if (n > 0) {
+                                android.util.Log.i("OutgoingSendQueue", "flushed $n queued item(s)")
+                            }
+                        }
                     }
                     ConnectionState.Disconnected -> {
                         pendingStart?.cancel()
@@ -288,6 +308,11 @@ class OmniTAKApp : Application() {
     val breadcrumbTrailStore: BreadcrumbTrailStore by lazy { BreadcrumbTrailStore() }
 
     val contactStore: ContactStore by lazy { ContactStore(trailStore = breadcrumbTrailStore) }
+
+    /** Offline outbox for markers / photos until TAK reconnects. */
+    val outgoingSendQueue: soy.engindearing.omnitak.mobile.domain.OutgoingSendQueue by lazy {
+        soy.engindearing.omnitak.mobile.domain.OutgoingSendQueue(this)
+    }
 
     /** #119 — Persists locally-dropped point markers across process death. */
     val localMarkerStore: LocalMarkerStore by lazy { LocalMarkerStore(this) }
@@ -606,7 +631,7 @@ class OmniTAKApp : Application() {
         appBroadcaster = SelfPositionBroadcaster(
             scope = appScope,
             prefsStore = userPrefsStore,
-            sendCoT = { xml -> serverManager.sendCoT(xml) },
+            sendCoT = { xml -> serverManager.sendCoT(xml, enqueueIfOffline = false) },
             locationFix = fixFlow,
             // #82 — when the operator manually repositions their self-marker,
             // PPLI broadcasts that coordinate instead of live GPS. The override
@@ -678,6 +703,7 @@ class OmniTAKApp : Application() {
                     }
                 }
             },
+            outgoingQueue = outgoingSendQueue,
         )
     }
 
@@ -687,7 +713,7 @@ class OmniTAKApp : Application() {
      *  per-uid throttling server→mesh. See [MeshServerRelay]. */
     val meshServerRelay: soy.engindearing.omnitak.mobile.domain.MeshServerRelay by lazy {
         soy.engindearing.omnitak.mobile.domain.MeshServerRelay(
-            sendToServer = { xml -> serverManager.sendCoT(xml) },
+            sendToServer = { xml -> serverManager.sendCoT(xml, enqueueIfOffline = false) },
             sendToMesh = { event -> activeMeshManager.sendCoTOverMesh(event) },
             // Prefer the original wire XML (preserves full detail / symbology);
             // fall back to rebuilding the minimal envelope from the parsed fields.
@@ -731,6 +757,7 @@ class OmniTAKApp : Application() {
             contactStore = contactStore,
             selfCallsign = { cachedPrefs.value.callsign },
             selfUid = { cachedPrefs.value.selfUid },
+            outgoingQueue = outgoingSendQueue,
         )
     }
 
@@ -744,7 +771,7 @@ class OmniTAKApp : Application() {
      *  [uasRegistry.active] for reactive HUD swaps. */
     val uasRegistry: soy.engindearing.omnitak.mobile.domain.MultiUasRegistry by lazy {
         soy.engindearing.omnitak.mobile.domain.MultiUasRegistry(
-            sendCoT = { xml -> serverManager.sendCoT(xml) },
+            sendCoT = { xml -> serverManager.sendCoT(xml, enqueueIfOffline = false) },
             operatorFix = { locationProvider.fix.value },
         )
     }
