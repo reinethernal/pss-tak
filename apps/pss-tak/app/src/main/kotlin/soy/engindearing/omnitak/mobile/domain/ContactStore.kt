@@ -20,7 +20,9 @@ import soy.engindearing.omnitak.mobile.data.CoTEvent
  * loop — a plain `value = value + x` can silently drop a concurrent
  * ingest under multi-server CoT burst.
  */
-class ContactStore {
+class ContactStore(
+    private val trailStore: BreadcrumbTrailStore? = null,
+) {
     private val _contacts = MutableStateFlow<Map<String, CoTEvent>>(emptyMap())
     val contacts: StateFlow<Map<String, CoTEvent>> = _contacts.asStateFlow()
 
@@ -55,6 +57,10 @@ class ContactStore {
                 source = event.source ?: current[event.uid]?.source,
             )
             current + (event.uid to stamped)
+        }
+        // PLI-like contact positions feed the SAR breadcrumb layer.
+        if (event.type.startsWith("a-") && !event.lat.isNaN() && !event.lon.isNaN()) {
+            trailStore?.add(event.uid, event.lat, event.lon, nowMs)
         }
     }
 

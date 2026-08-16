@@ -32,6 +32,7 @@ import soy.engindearing.omnitak.mobile.ui.theme.TacticalSurface
 fun LayersDialog(
     gridEnabled: Boolean,
     drawingsVisible: Boolean,
+    trailsVisible: Boolean = false,
     aircraftVisible: Boolean,
     contactsVisible: Boolean,
     callsignCardVisible: Boolean,
@@ -40,6 +41,7 @@ fun LayersDialog(
     sarPointsOnly: Boolean = false,
     onToggleGrid: (Boolean) -> Unit,
     onToggleDrawings: (Boolean) -> Unit,
+    onToggleTrails: (Boolean) -> Unit = {},
     onToggleAircraft: (Boolean) -> Unit,
     onToggleContacts: (Boolean) -> Unit,
     onToggleCallsignCard: (Boolean) -> Unit,
@@ -66,6 +68,7 @@ fun LayersDialog(
                 LayerRow("Mesh nodes", meshNodesVisible, onToggleMeshNodes)
                 LayerRow("Только точки ПСР", sarPointsOnly, onToggleSarPointsOnly)
                 LayerRow("Drawings", drawingsVisible, onToggleDrawings)
+                LayerRow("Треки", trailsVisible, onToggleTrails)
                 LayerRow("Aircraft (ADSB)", aircraftVisible, onToggleAircraft)
                 LayerRow("Lat/Lon grid", gridEnabled, onToggleGrid)
                 LayerRow("Callsign card", callsignCardVisible, onToggleCallsignCard)

@@ -147,6 +147,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // existing read sites stay terse.
     val gridEnabled = userPrefs.gridEnabled
     val drawingsVisible = userPrefs.drawingsVisible
+    val trailsVisible = userPrefs.trailsVisible
     val aircraftVisible = userPrefs.aircraftVisible
     val contactsVisible = userPrefs.contactsVisible
     val callsignCardVisible = userPrefs.callsignCardVisible
@@ -582,6 +583,17 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             val base = if (drawingsVisible) drawings else emptyList()
             soy.engindearing.omnitak.mobile.ui.components.DrawingShapeRenderer
                 .apply(m, base + buildRangeRingDrawings(rangeRingCenter))
+        }
+    }
+    val breadcrumbTrails by app.breadcrumbTrailStore.trails.collectAsState()
+    LaunchedEffect(breadcrumbTrails, trailsVisible, mapboxMap) {
+        mapboxMap?.let { m ->
+            if (trailsVisible) {
+                soy.engindearing.omnitak.mobile.ui.components.BreadcrumbTrailRenderer
+                    .apply(m, breadcrumbTrails)
+            } else {
+                soy.engindearing.omnitak.mobile.ui.components.BreadcrumbTrailRenderer.clear(m)
+            }
         }
     }
     val handleMapLongPress: (LatLng, Offset) -> Unit = { latLng, offset ->
@@ -2369,6 +2381,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             LayersDialog(
                 gridEnabled = gridEnabled,
                 drawingsVisible = drawingsVisible,
+                trailsVisible = trailsVisible,
                 aircraftVisible = aircraftVisible,
                 contactsVisible = contactsVisible,
                 callsignCardVisible = callsignCardVisible,
@@ -2377,6 +2390,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 sarPointsOnly = sarPointsOnly,
                 onToggleGrid = { v -> mutatePref { it.copy(gridEnabled = v) } },
                 onToggleDrawings = { v -> mutatePref { it.copy(drawingsVisible = v) } },
+                onToggleTrails = { v -> mutatePref { it.copy(trailsVisible = v) } },
                 onToggleAircraft = { v -> mutatePref { it.copy(aircraftVisible = v) } },
                 onToggleContacts = { v -> mutatePref { it.copy(contactsVisible = v) } },
                 onToggleCallsignCard = { v -> mutatePref { it.copy(callsignCardVisible = v) } },

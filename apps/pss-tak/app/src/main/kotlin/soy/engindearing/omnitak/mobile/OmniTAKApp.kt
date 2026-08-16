@@ -23,6 +23,7 @@ import soy.engindearing.omnitak.mobile.data.MeshDeviceConfigStore
 import soy.engindearing.omnitak.mobile.data.SelfFixPersistence
 import soy.engindearing.omnitak.mobile.data.TAKServerStore
 import soy.engindearing.omnitak.mobile.data.UserPrefsStore
+import soy.engindearing.omnitak.mobile.domain.BreadcrumbTrailStore
 import soy.engindearing.omnitak.mobile.domain.ChatStore
 import soy.engindearing.omnitak.mobile.domain.ContactStore
 import soy.engindearing.omnitak.mobile.domain.ConnectionState
@@ -161,6 +162,12 @@ class OmniTAKApp : Application() {
                     lastPersistedMs = fix.timeMs
                     userPrefsStore.setLastSelfFix(fix)
                 }
+                if (fix != null) {
+                    val uid = cachedPrefs.value.selfUid
+                    if (uid.isNotBlank()) {
+                        breadcrumbTrailStore.add(uid, fix.lat, fix.lon, fix.timeMs)
+                    }
+                }
             }
         }
 
@@ -278,7 +285,9 @@ class OmniTAKApp : Application() {
         soy.engindearing.diagnostics.DiagnosticsPlugin()
     }
 
-    val contactStore: ContactStore by lazy { ContactStore() }
+    val breadcrumbTrailStore: BreadcrumbTrailStore by lazy { BreadcrumbTrailStore() }
+
+    val contactStore: ContactStore by lazy { ContactStore(trailStore = breadcrumbTrailStore) }
 
     /** #119 — Persists locally-dropped point markers across process death. */
     val localMarkerStore: LocalMarkerStore by lazy { LocalMarkerStore(this) }

@@ -72,6 +72,8 @@ data class UserPrefs(
     val callsignCardVisible: Boolean = true,
     val gridEnabled: Boolean = false,
     val drawingsVisible: Boolean = true,
+    /** Local breadcrumb trails for self + peers (SAR «Треки»). Default off. */
+    val trailsVisible: Boolean = false,
     val aircraftVisible: Boolean = true,
     val contactsVisible: Boolean = true,
     val followMeActive: Boolean = false,
@@ -172,6 +174,7 @@ class UserPrefsStore(private val context: Context) {
     private val KEY_CALLSIGN_CARD = booleanPreferencesKey("callsign_card_visible")
     private val KEY_GRID = booleanPreferencesKey("grid_enabled")
     private val KEY_DRAWINGS_VIS = booleanPreferencesKey("drawings_visible")
+    private val KEY_TRAILS_VIS = booleanPreferencesKey("trails_visible")
     private val KEY_AIRCRAFT_VIS = booleanPreferencesKey("aircraft_visible")
     private val KEY_CONTACTS_VIS = booleanPreferencesKey("contacts_visible")
     private val KEY_FOLLOW_ME = booleanPreferencesKey("follow_me_active")
@@ -218,6 +221,7 @@ class UserPrefsStore(private val context: Context) {
             p[KEY_CALLSIGN_CARD] = next.callsignCardVisible
             p[KEY_GRID] = next.gridEnabled
             p[KEY_DRAWINGS_VIS] = next.drawingsVisible
+            p[KEY_TRAILS_VIS] = next.trailsVisible
             p[KEY_AIRCRAFT_VIS] = next.aircraftVisible
             p[KEY_CONTACTS_VIS] = next.contactsVisible
             p[KEY_FOLLOW_ME] = next.followMeActive
@@ -345,6 +349,7 @@ class UserPrefsStore(private val context: Context) {
         callsignCardVisible = p[KEY_CALLSIGN_CARD] ?: true,
         gridEnabled = p[KEY_GRID] ?: false,
         drawingsVisible = p[KEY_DRAWINGS_VIS] ?: true,
+        trailsVisible = p[KEY_TRAILS_VIS] ?: false,
         aircraftVisible = p[KEY_AIRCRAFT_VIS] ?: true,
         contactsVisible = p[KEY_CONTACTS_VIS] ?: true,
         followMeActive = p[KEY_FOLLOW_ME] ?: false,

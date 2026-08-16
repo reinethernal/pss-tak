@@ -21,6 +21,14 @@
   let pendingLayer = null;
   let missionsCache = [];
   let sectorsCache = [];
+  let tracksEnabled = false;
+  let tracksWindow = "6h";
+  let tracksFilterUid = "";
+  let trackLayerGroup = null;
+  let trackPolylines = {}; // device_uid -> { layer, callsign, lastTsMs }
+  let tracksRefreshTimer = null;
+  let socketHooked = false;
+  const TRACK_MIN_INTERVAL_MS = 8000;
 
   function api(path, opts) {
     return fetch(path, {
@@ -131,6 +139,187 @@
       if (!Array.isArray(missionsCache)) missionsCache = [];
     } catch (_) {
       missionsCache = [];
+    }
+  }
+
+  function colorForCallsign(cs) {
+    let h = 0;
+    const s = String(cs || "");
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    const hue = h % 360;
+    return "hsl(" + hue + ",70%,55%)";
+  }
+
+  function sinceIsoForWindow() {
+    const now = Date.now();
+    if (tracksWindow === "1h") return new Date(now - 3600e3).toISOString();
+    if (tracksWindow === "24h") return new Date(now - 86400e3).toISOString();
+    if (tracksWindow === "shift") {
+      const inp = panel && panel.querySelector("#psr-track-shift");
+      const v = inp && inp.value;
+      if (v) {
+        const d = new Date(v);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
+      const start = new Date();
+      start.setHours(8, 0, 0, 0);
+      if (start.getTime() > now) start.setDate(start.getDate() - 1);
+      return start.toISOString();
+    }
+    return new Date(now - 6 * 3600e3).toISOString();
+  }
+
+  function ensureTrackLayer() {
+    const map = window.__OTS_MAP__;
+    if (!map || !window.L) return null;
+    if (!trackLayerGroup) {
+      trackLayerGroup = L.layerGroup();
+    }
+    if (tracksEnabled && !map.hasLayer(trackLayerGroup)) map.addLayer(trackLayerGroup);
+    if (!tracksEnabled && map.hasLayer(trackLayerGroup)) map.removeLayer(trackLayerGroup);
+    return trackLayerGroup;
+  }
+
+  function clearTracks() {
+    Object.keys(trackPolylines).forEach((uid) => {
+      const t = trackPolylines[uid];
+      if (trackLayerGroup && t && t.layer) trackLayerGroup.removeLayer(t.layer);
+    });
+    trackPolylines = {};
+  }
+
+  function bindTrackTooltip(layer, callsign, pts) {
+    const first = pts[0] && pts[0].ts ? pts[0].ts : "";
+    const last = pts[pts.length - 1] && pts[pts.length - 1].ts ? pts[pts.length - 1].ts : "";
+    layer.bindTooltip(
+      (callsign || "EUD") + "<br/><small>" + first + " → " + last + "</small>",
+      { sticky: true }
+    );
+  }
+
+  async function loadTracks() {
+    if (!tracksEnabled) return;
+    const map = window.__OTS_MAP__;
+    if (!map || !window.L) return;
+    ensureTrackLayer();
+    const since = sinceIsoForWindow();
+    let url = "/api/tracks?since=" + encodeURIComponent(since) + "&min_interval_s=8&max_points=2000";
+    if (tracksFilterUid) url += "&uid=" + encodeURIComponent(tracksFilterUid);
+    try {
+      const res = await api(url);
+      if (res.status === 401) {
+        setStatus("Войдите в кабинет, чтобы видеть треки");
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      clearTracks();
+      (data.results || []).forEach((tr) => {
+        const latlngs = (tr.points || [])
+          .filter((p) => p.lat != null && p.lon != null)
+          .map((p) => [p.lat, p.lon]);
+        if (latlngs.length < 2) return;
+        const color = colorForCallsign(tr.callsign || tr.device_uid);
+        const layer = L.polyline(latlngs, { color, weight: 3, opacity: 0.85 });
+        bindTrackTooltip(layer, tr.callsign, tr.points);
+        trackLayerGroup.addLayer(layer);
+        const last = tr.points[tr.points.length - 1];
+        const lastTs = last && last.ts ? Date.parse(last.ts) : 0;
+        trackPolylines[tr.device_uid] = {
+          layer,
+          callsign: tr.callsign,
+          lastTsMs: isNaN(lastTs) ? 0 : lastTs,
+        };
+      });
+      const n = Object.keys(trackPolylines).length;
+      setStatus(n ? "Треки: " + n + " (с " + since.slice(0, 16) + ")" : "Нет треков за окно");
+      updateKmlLink(since);
+    } catch (_) {
+      setStatus("Ошибка загрузки треков");
+    }
+  }
+
+  function updateKmlLink(since) {
+    const a = panel && panel.querySelector("#psr-track-kml");
+    if (!a) return;
+    const uid = tracksFilterUid || Object.keys(trackPolylines)[0] || "";
+    if (!uid) {
+      a.href = "#";
+      a.style.opacity = "0.5";
+      a.onclick = (e) => {
+        e.preventDefault();
+        setStatus("Выберите uid в фильтре или дождитесь треков");
+      };
+      return;
+    }
+    a.style.opacity = "1";
+    a.onclick = null;
+    a.href =
+      "/Marti/ExportMissionKML?uid=" +
+      encodeURIComponent(uid) +
+      "&startTime=" +
+      encodeURIComponent(since) +
+      "&format=kml";
+  }
+
+  function appendLivePoint(payload) {
+    if (!tracksEnabled || !payload) return;
+    const uid = payload.device_uid || (payload.eud && payload.eud.uid) || payload.uid;
+    const lat = payload.latitude != null ? payload.latitude : payload.lat;
+    const lon = payload.longitude != null ? payload.longitude : payload.lon;
+    if (!uid || lat == null || lon == null) return;
+    if (tracksFilterUid && uid !== tracksFilterUid) return;
+    ensureTrackLayer();
+    const now = Date.now();
+    let entry = trackPolylines[uid];
+    if (!entry) {
+      if (!window.L || !trackLayerGroup) return;
+      const cs = (payload.eud && payload.eud.callsign) || payload.callsign || uid;
+      const layer = L.polyline([[lat, lon]], {
+        color: colorForCallsign(cs),
+        weight: 3,
+        opacity: 0.85,
+      });
+      layer.bindTooltip(cs);
+      trackLayerGroup.addLayer(layer);
+      entry = { layer, callsign: cs, lastTsMs: now };
+      trackPolylines[uid] = entry;
+      return;
+    }
+    if (entry.lastTsMs && now - entry.lastTsMs < TRACK_MIN_INTERVAL_MS) return;
+    entry.layer.addLatLng([lat, lon]);
+    entry.lastTsMs = now;
+  }
+
+  function hookSocketPoints() {
+    if (socketHooked) return;
+    const sock = window.__OTS_SOCKET__ || window.socket || (window.io && window.io.socket);
+    if (sock && typeof sock.on === "function") {
+      sock.on("point", (p) => appendLivePoint(p));
+      socketHooked = true;
+      return;
+    }
+    // Fallback: poll while enabled
+  }
+
+  function setTracksEnabled(on) {
+    tracksEnabled = !!on;
+    ensureTrackLayer();
+    if (!tracksEnabled) {
+      clearTracks();
+      if (tracksRefreshTimer) {
+        clearInterval(tracksRefreshTimer);
+        tracksRefreshTimer = null;
+      }
+      setStatus("");
+      return;
+    }
+    hookSocketPoints();
+    loadTracks();
+    if (!tracksRefreshTimer) {
+      tracksRefreshTimer = setInterval(() => {
+        if (tracksEnabled) loadTracks();
+      }, 45000);
     }
   }
 
@@ -283,7 +472,20 @@
       "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>" +
       "<strong>Секторы ПСР</strong>" +
       "<a href='/downloads/psr-operation.html' style='color:#8cf;font-size:12px'>Операция…</a></div>" +
-      "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — кнопка слева на карте. Точки ПСР фильтруются сверху.</div>" +
+      "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — слева. Треки = покрытие; статус сектора «пройден» — вручную.</div>" +
+      "<div id='psr-tracks-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
+      "<label style='display:flex;align-items:center;gap:8px;font-weight:600'>" +
+      "<input type='checkbox' id='psr-tracks-on'/> Треки</label>" +
+      "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'>" +
+      "<select id='psr-tracks-window' style='flex:1;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'>" +
+      "<option value='1h'>1 час</option><option value='6h' selected>6 часов</option>" +
+      "<option value='24h'>24 часа</option><option value='shift'>смена с…</option></select>" +
+      "<input type='datetime-local' id='psr-track-shift' style='flex:1;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
+      "</div>" +
+      "<input id='psr-track-uid' placeholder='Фильтр uid (пусто = все)' style='width:100%;margin-top:6px;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
+      "<div style='margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap'>" +
+      "<button type='button' id='psr-tracks-reload' style='padding:4px 8px;border:1px solid #555;background:#333;color:#eee;border-radius:4px;cursor:pointer'>Обновить</button>" +
+      "<a id='psr-track-kml' href='#' target='_blank' style='color:#8cf;font-size:12px'>Экспорт KML</a></div></div>" +
       "<form id='psr-sector-form' style='display:none;margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<div id='psr-form-title' style='font-weight:600;margin-bottom:6px'>Новый сектор</div>" +
       "<input name='name' placeholder='Имя сектора' style='width:100%;margin-bottom:6px;padding:6px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
@@ -296,6 +498,16 @@
       "<div id='psr-sector-list'></div>";
     document.body.appendChild(panel);
     panel.querySelector("#psr-sector-form").onsubmit = saveSector;
+    panel.querySelector("#psr-tracks-on").onchange = (e) => setTracksEnabled(e.target.checked);
+    panel.querySelector("#psr-tracks-window").onchange = (e) => {
+      tracksWindow = e.target.value;
+      if (tracksEnabled) loadTracks();
+    };
+    panel.querySelector("#psr-track-uid").onchange = (e) => {
+      tracksFilterUid = (e.target.value || "").trim();
+      if (tracksEnabled) loadTracks();
+    };
+    panel.querySelector("#psr-tracks-reload").onclick = () => loadTracks();
   }
 
   function ensureBar() {

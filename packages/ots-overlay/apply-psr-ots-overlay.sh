@@ -13,6 +13,7 @@ echo "==> Python blueprints / models"
 install -d "$SITE_PKG/blueprints/ots_api" "$SITE_PKG/models"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/mission_ops_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/search_sector_api.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"
@@ -51,6 +52,7 @@ fi
 
 chown -R ots:ots "$SITE_PKG/blueprints/ots_api/mission_ops_api.py" \
   "$SITE_PKG/blueprints/ots_api/search_sector_api.py" \
+  "$SITE_PKG/blueprints/ots_api/track_api.py" \
   "$SITE_PKG/models/MissionTask.py" \
   "$SITE_PKG/models/SearchSector.py" 2>/dev/null || true
 chown www-data:www-data "$WWW/assets/js/psr-map-ext.js" "$WWW/downloads/psr-operation.html" 2>/dev/null || true

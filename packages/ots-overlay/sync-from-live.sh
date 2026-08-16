@@ -10,6 +10,7 @@ mkdir -p "$ROOT/site-packages/blueprints/ots_api" "$ROOT/site-packages/models" \
 
 cp -a "$SITE_PKG/blueprints/ots_api/mission_ops_api.py" "$ROOT/site-packages/blueprints/ots_api/"
 cp -a "$SITE_PKG/blueprints/ots_api/search_sector_api.py" "$ROOT/site-packages/blueprints/ots_api/"
+cp -a "$SITE_PKG/blueprints/ots_api/track_api.py" "$ROOT/site-packages/blueprints/ots_api/"
 cp -a "$SITE_PKG/blueprints/ots_api/__init__.py" "$ROOT/site-packages/blueprints/ots_api/"
 cp -a "$SITE_PKG/models/MissionTask.py" "$ROOT/site-packages/models/"
 cp -a "$SITE_PKG/models/SearchSector.py" "$ROOT/site-packages/models/"
