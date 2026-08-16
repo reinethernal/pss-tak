@@ -14,6 +14,7 @@ install -d "$SITE_PKG/blueprints/ots_api" "$SITE_PKG/models"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/mission_ops_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/search_sector_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_invite_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"
@@ -24,7 +25,10 @@ fi
 echo "==> Web assets / downloads"
 install -d "$WWW/assets/js" "$WWW/downloads"
 install -m 644 "$ROOT/www/assets/js/psr-map-ext.js" "$WWW/assets/js/"
-for f in psr-operation.html psr-sectors.html psr-start.txt НАЧНИТЕ-ЗДЕСЬ.txt; do
+for f in Users-CVA3KzTZ.js ClientApps-psr.js; do
+  [[ -f "$ROOT/www/assets/js/$f" ]] && install -m 644 "$ROOT/www/assets/js/$f" "$WWW/assets/js/"
+done
+for f in psr-operation.html psr-sectors.html psr-start.txt psr-invite.html psr-invite-admin.html НАЧНИТЕ-ЗДЕСЬ.txt; do
   [[ -f "$ROOT/www/downloads/$f" ]] && install -m 644 "$ROOT/www/downloads/$f" "$WWW/downloads/"
 done
 

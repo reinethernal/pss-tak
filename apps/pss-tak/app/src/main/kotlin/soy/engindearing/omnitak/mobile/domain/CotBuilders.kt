@@ -324,6 +324,66 @@ object CotBuilders {
         )
     }
 
+    /**
+     * Emergency / distress marker for SAR field alert (`b-a-o-tbl` style
+     * 911 / emergency beacon). Peers and HQ see a high-priority point.
+     */
+    fun buildEmergencyAlertEvent(
+        uid: String,
+        callsign: String,
+        lat: Double,
+        lon: Double,
+        remarks: String = "ТРЕВОГА ПСР",
+        staleSeconds: Long = 3600,
+    ): String {
+        val now = nowIso()
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(callsign.ifBlank { "ALERT" })).append("\"/>")
+            append("<emergency type=\"911\"/>")
+            append("<remarks>").append(CotXml.escape(remarks)).append("</remarks>")
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = "b-a-o-tbl",
+            how = "h-g-i-g-o",
+            lat = lat,
+            lon = lon,
+            timeIso = now,
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
+
+    /** Simple CasEvac / эвак point for civil SAR (not full 9-Line). */
+    fun buildEvacPointEvent(
+        uid: String,
+        callsign: String,
+        lat: Double,
+        lon: Double,
+        remarks: String,
+        staleSeconds: Long = 3600 * 12,
+    ): String {
+        val now = nowIso()
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(callsign.ifBlank { "EVAC" })).append("\"/>")
+            append("<remarks>").append(CotXml.escape(remarks)).append("</remarks>")
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = "b-r-f-h-c",
+            how = "h-g-i-g-o",
+            lat = lat,
+            lon = lon,
+            timeIso = now,
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
+
     /** XML escape — delegates to the shared [CotXml.escape]. Kept as a
      *  public alias because non-CoT XML emitters (KML/data-package
      *  exporters) call it too. */

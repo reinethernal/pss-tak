@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Штаб: персональная ссылка ПСР</title>
+  <style>
+    body { font:15px system-ui,sans-serif; max-width:640px; margin:24px auto; padding:0 16px; background:#111; color:#eee; }
+    input, button { font:inherit; padding:8px 10px; margin:4px 0; }
+    input { width:100%; background:#222; border:1px solid #444; color:#eee; border-radius:6px; }
+    button { background:#2a6; color:#fff; border:0; border-radius:6px; cursor:pointer; padding:10px 14px; }
+    .out { background:#1a1a1a; border:1px solid #333; padding:12px; border-radius:8px; word-break:break-all; margin-top:12px; }
+    .muted { color:#aaa; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h1>Персональная ссылка для волонтёра</h1>
+  <p class="muted">Войдите в кабинет OTS в этой же вкладке (cookies), укажите логин пользователя и скопируйте ссылку.</p>
+  <label>Логин пользователя OTS</label>
+  <input id="user" placeholder="например ivanov" />
+  <label>Подсказка пароля (опционально, только в ответе админу)</label>
+  <input id="hint" placeholder="не попадёт в URL invite" />
+  <button type="button" id="go">Создать ссылку</button>
+  <div class="out" id="out">—</div>
+  <script>
+    document.getElementById('go').onclick = async () => {
+      const username = document.getElementById('user').value.trim();
+      const password_hint = document.getElementById('hint').value.trim() || null;
+      const out = document.getElementById('out');
+      if (!username) { out.textContent = 'Укажите логин'; return; }
+      out.textContent = '…';
+      const res = await fetch('/api/psr/invite', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password_hint, max: 20 })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        out.textContent = data.error || ('Ошибка ' + res.status + ' — войдите как administrator');
+        return;
+      }
+      out.innerHTML =
+        '<div><strong>Ссылка:</strong><br><a href="' + data.invite_url + '" style="color:#8cf">' + data.invite_url + '</a></div>' +
+        '<button type="button" id="copy" style="margin-top:8px">Скопировать</button>' +
+        (data.password_hint ? '<p class="muted">Подсказка пароля (только вам): ' + data.password_hint + '</p>' : '');
+      document.getElementById('copy').onclick = () => navigator.clipboard.writeText(data.invite_url);
+    };
+  </script>
+</body>
+</html>

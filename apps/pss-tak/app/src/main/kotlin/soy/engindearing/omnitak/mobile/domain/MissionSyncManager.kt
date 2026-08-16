@@ -191,6 +191,127 @@ class MissionSyncManager(
         }
     }
 
+    suspend fun patchTaskStatus(
+        serverId: String,
+        missionName: String,
+        taskUid: String,
+        status: String,
+    ): Result<TakMissionTask> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                TakRestApiClient(sv, certVault).patchMissionTask(missionName, taskUid, status)
+            }
+        }
+    }
+
+    suspend fun createTask(
+        serverId: String,
+        missionName: String,
+        title: String,
+        body: String?,
+        assignee: String?,
+        sectorUid: String?,
+        returnBy: String?,
+    ): Result<TakMissionTask> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                TakRestApiClient(sv, certVault).createMissionTask(
+                    missionName, title, body, assignee, sectorUid, returnBy,
+                )
+            }
+        }
+    }
+
+    suspend fun patchRosterStatus(
+        serverId: String,
+        missionName: String,
+        entryUid: String,
+        status: String,
+    ): Result<TakMissionRosterEntry> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                TakRestApiClient(sv, certVault).patchMissionRoster(missionName, entryUid, status)
+            }
+        }
+    }
+
+    suspend fun createSector(
+        serverId: String,
+        name: String,
+        coordinates: List<Pair<Double, Double>>,
+        missionName: String?,
+        uid: String? = null,
+    ): Result<soy.engindearing.omnitak.mobile.data.TakSearchSector> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                TakRestApiClient(sv, certVault).createSearchSector(
+                    name = name,
+                    coordinates = coordinates,
+                    missionName = missionName,
+                    uid = uid,
+                )
+            }
+        }
+    }
+
+    suspend fun patchSectorStatus(
+        serverId: String,
+        sectorUid: String,
+        status: String,
+    ): Result<soy.engindearing.omnitak.mobile.data.TakSearchSector> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                TakRestApiClient(sv, certVault).patchSearchSectorStatus(sectorUid, status)
+            }
+        }
+    }
+
+    suspend fun listSectors(
+        serverId: String,
+        missionName: String? = null,
+    ): Result<List<soy.engindearing.omnitak.mobile.data.TakSearchSector>> {
+        val sv = enabledServers().firstOrNull { it.id == serverId }
+            ?: return Result.failure(IllegalStateException("Server is not available for mission sync"))
+        return withContext(Dispatchers.IO) {
+            runCatching { TakRestApiClient(sv, certVault).listSearchSectors(missionName) }
+        }
+    }
+
+    /** Pull HQ trail history into [BreadcrumbTrailStore] for peer tracks. */
+    suspend fun fetchTracksInto(
+        trailStore: BreadcrumbTrailStore,
+        sinceHours: Int = 6,
+    ): Result<Int> {
+        val candidates = enabledServers()
+        if (candidates.isEmpty()) return Result.failure(IllegalStateException("No server"))
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                var count = 0
+                for (sv in candidates) {
+                    val trails = runCatching {
+                        TakRestApiClient(sv, certVault).getTracks(sinceHours)
+                    }.getOrDefault(emptyList())
+                    for (t in trails) {
+                        trailStore.seed(t.deviceUid, t.points)
+                        count += t.points.size
+                    }
+                    if (trails.isNotEmpty()) break
+                }
+                count
+            }
+        }
+    }
+
     /** Refresh a single server (tap-to-retry on its row). */
     suspend fun refresh(serverId: String) {
         val sv = enabledServers().firstOrNull { it.id == serverId } ?: return

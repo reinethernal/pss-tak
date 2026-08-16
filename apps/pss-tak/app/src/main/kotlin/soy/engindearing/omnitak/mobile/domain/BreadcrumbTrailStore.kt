@@ -38,6 +38,16 @@ class BreadcrumbTrailStore(
         }
     }
 
+    /** Replace/seed a trail from HQ `/api/tracks` (no throttle). */
+    fun seed(uid: String, points: List<Pair<Double, Double>>) {
+        if (uid.isBlank() || points.size < 2) return
+        val now = System.currentTimeMillis()
+        val trail = points.mapIndexed { i, (lat, lon) ->
+            TrailPoint(lat, lon, now - (points.size - i) * 1000L)
+        }.takeLast(maxPointsPerUid)
+        _trails.update { it + (uid to trail) }
+    }
+
     fun clear() {
         _trails.value = emptyMap()
     }

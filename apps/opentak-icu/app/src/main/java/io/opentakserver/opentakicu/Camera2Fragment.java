@@ -43,6 +43,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.slider.Slider;
+import com.google.firebase.BuildConfig;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.pedro.common.ConnectChecker;
 import com.pedro.encoder.input.sources.video.Camera2Source;
 import com.pedro.encoder.input.video.CameraHelper;
@@ -59,6 +61,28 @@ public class Camera2Fragment extends Fragment
 
     private final String LOGTAG = "Camera2Fragment";
     SharedPreferences pref;
+
+    /** MediaMTX on ПСР requires OTS username/password (external_auth). */
+    private boolean psrRequireStreamAuth() {
+        String user = pref.getString(Preferences.STREAM_USERNAME, Preferences.STREAM_USERNAME_DEFAULT);
+        String pass = pref.getString(Preferences.STREAM_PASSWORD, Preferences.STREAM_PASSWORD_DEFAULT);
+        if (user == null) user = "";
+        if (pass == null) pass = "";
+        if (user.trim().isEmpty() || pass.isEmpty()) {
+            Toast.makeText(activity,
+                    "Укажите логин и пароль OTS в настройках трансляции (иначе MediaMTX отклонит поток)",
+                    Toast.LENGTH_LONG).show();
+            return false;
+        }
+        if (pass.contains("@") || pass.contains(":")) {
+            Toast.makeText(activity,
+                    "Пароль не должен содержать @ или : (ломает RTSP URL)",
+                    Toast.LENGTH_LONG).show();
+            return false;
+        }
+        return true;
+    }
+
 
     private Activity activity;
     private OpenGlView openGlView;
@@ -84,6 +108,7 @@ public class Camera2Fragment extends Fragment
     private boolean awaitingScreenCapturePermission = false;
     private Camera2Service camera_service;
     private long last_fix_time = 0;
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     private ActivityResultLauncher<Intent> screenCaptureLauncher;
 
@@ -268,6 +293,7 @@ public class Camera2Fragment extends Fragment
                             activity.bindService(new Intent(activity, Camera2Service.class), mConnection, Context.BIND_IMPORTANT);
                         } else {
                             // Already bound (e.g. camera fallback preview); re-prepare with ScreenSource and start streaming.
+                            if (!psrRequireStreamAuth()) return;
                             camera_service.startStream();
                             if (openGlView != null) {
                                 openGlView.setVisibility(View.INVISIBLE);
@@ -292,6 +318,13 @@ public class Camera2Fragment extends Fragment
         );
 
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        if (!BuildConfig.DEBUG) {
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(activity);
+            Bundle bundle = new Bundle();
+            bundle.putString("Activity", "MainActivity");
+            mFirebaseAnalytics.logEvent("Start", bundle);
+        }
 
         String uid = pref.getString(Preferences.UID, null);
         if (uid == null)
@@ -494,6 +527,10 @@ public class Camera2Fragment extends Fragment
             tvLocationFix.setTextColor(Color.RED);
             tvTakServer.setText(R.string.no);
             tvTakServer.setTextColor(Color.RED);
+            if (!psrRequireStreamAuth()) {
+                bStartStop.setImageResource(R.drawable.ic_record);
+                return;
+            }
             camera_service.startStream();
             if (Preferences.VIDEO_SOURCE_SCREEN.equals(videoSource) && camera_service.hasScreenCapture()) {
                 setPreviewSurfaceSecure(true);

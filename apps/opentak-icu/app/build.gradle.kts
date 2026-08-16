@@ -21,8 +21,8 @@ android {
         applicationId = "io.opentakserver.opentakicu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-psr"
+        versionCode = 10601
+        versionName = "1.7.0-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

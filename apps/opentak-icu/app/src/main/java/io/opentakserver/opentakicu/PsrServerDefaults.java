@@ -54,6 +54,12 @@ public final class PsrServerDefaults {
         if (!prefs.contains(Preferences.ATAK_SEND_COT)) {
             ed.putBoolean(Preferences.ATAK_SEND_COT, Preferences.ATAK_SEND_COT_DEFAULT);
         }
+        if (!prefs.contains(Preferences.ATAK_SEND_STREAM_DETAILS)) {
+            ed.putBoolean(Preferences.ATAK_SEND_STREAM_DETAILS, true);
+        }
+        if (!prefs.contains(Preferences.STREAM_VIDEO)) {
+            ed.putBoolean(Preferences.STREAM_VIDEO, true);
+        }
         if (!prefs.contains(Preferences.ATAK_SERVER_SSL)) {
             ed.putBoolean(Preferences.ATAK_SERVER_SSL, Preferences.ATAK_SERVER_SSL_DEFAULT);
         }

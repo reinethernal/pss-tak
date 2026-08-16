@@ -16,6 +16,7 @@ private val Context.userPrefsDataStore by preferencesDataStore(name = "user_pref
 enum class DistanceUnit { METRIC, IMPERIAL }
 enum class CoordFormat { LATLON_DECIMAL, LATLON_DMS, MGRS, UTM, TWD97, BNG }
 enum class MapProvider { OSM_RASTER, SATELLITE_HINT, TOPO_HINT, WMTS_CUSTOM }
+// FieldRole lives in FieldRole.kt (Unified SAR progressive disclosure).
 
 /** Mesh framework the operator's radio speaks. Drives which manager the
  *  mesh screen + CoT bridge + broadcaster route through. */
@@ -155,6 +156,10 @@ data class UserPrefs(
      *  parity). DANGEROUS on a busy server (LoRa airtime), so OFF by default and
      *  hard-throttled server→mesh. See [MeshServerRelay]. */
     val relayGatewayEnabled: Boolean = false,
+    /** Unified SAR — progressive disclosure mode (Поисковик / Старший / Штаб). */
+    val fieldRole: FieldRole = FieldRole.SEARCHER,
+    /** Optional package id for OpenTAK ICU deep-link («Открыть стрим»). */
+    val icuPackageId: String = "com.brian.opentakicu",
 )
 
 class UserPrefsStore(private val context: Context) {
@@ -202,6 +207,8 @@ class UserPrefsStore(private val context: Context) {
     private val KEY_SELF_MARKER_TRIANGLE = booleanPreferencesKey("selfMarkerTriangle")
     private val KEY_STALENESS_OVERLAY = booleanPreferencesKey("staleness_overlay_enabled")
     private val KEY_RELAY_GATEWAY = booleanPreferencesKey("relay_gateway_enabled")
+    private val KEY_FIELD_ROLE = stringPreferencesKey("field_role")
+    private val KEY_ICU_PACKAGE = stringPreferencesKey("icu_package_id")
 
     val prefs: Flow<UserPrefs> = context.userPrefsDataStore.data.map { p -> readFrom(p) }
 
@@ -250,6 +257,8 @@ class UserPrefsStore(private val context: Context) {
             p[KEY_SELF_MARKER_TRIANGLE] = next.selfMarkerTriangle
             p[KEY_STALENESS_OVERLAY] = next.stalenessOverlayEnabled
             p[KEY_RELAY_GATEWAY] = next.relayGatewayEnabled
+            p[KEY_FIELD_ROLE] = next.fieldRole.name
+            p[KEY_ICU_PACKAGE] = next.icuPackageId
         }
     }
 
@@ -379,6 +388,8 @@ class UserPrefsStore(private val context: Context) {
         selfMarkerTriangle = p[KEY_SELF_MARKER_TRIANGLE] ?: false,
         stalenessOverlayEnabled = p[KEY_STALENESS_OVERLAY] ?: false,
         relayGatewayEnabled = p[KEY_RELAY_GATEWAY] ?: false,
+        fieldRole = FieldRole.fromRaw(p[KEY_FIELD_ROLE]),
+        icuPackageId = p[KEY_ICU_PACKAGE] ?: "com.brian.opentakicu",
     )
 
     // ATAK / OpenTakServer canonical team names are Title Case ("Cyan",

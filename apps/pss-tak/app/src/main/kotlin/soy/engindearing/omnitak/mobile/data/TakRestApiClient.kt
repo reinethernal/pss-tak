@@ -210,6 +210,143 @@ class TakRestApiClient(
         return parseMissionSubject(body)
     }
 
+    /** PATCH task status (acked / done / …). */
+    fun patchMissionTask(missionName: String, taskUid: String, status: String): TakMissionTask {
+        val payload = """{"status":${jsonString(status)}}""".toByteArray(Charsets.UTF_8)
+        val (code, body) = httpRequest(
+            "PATCH",
+            "/api/missions/${urlSegment(missionName)}/tasks/${urlSegment(taskUid)}",
+            emptyList(),
+            payload,
+            "application/json",
+        )
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseTaskFromWriteResponse(body)
+            ?: TakMissionTask(uid = taskUid, title = "", status = status)
+    }
+
+    /** Create a mission task (field HQ). */
+    fun createMissionTask(
+        missionName: String,
+        title: String,
+        bodyText: String? = null,
+        assignee: String? = null,
+        sectorUid: String? = null,
+        returnBy: String? = null,
+    ): TakMissionTask {
+        val payload = buildString {
+            append('{')
+            append("\"title\":").append(jsonString(title))
+            if (!bodyText.isNullOrBlank()) append(",\"body\":").append(jsonString(bodyText))
+            if (!assignee.isNullOrBlank()) append(",\"assignee\":").append(jsonString(assignee))
+            if (!sectorUid.isNullOrBlank()) append(",\"sector_uid\":").append(jsonString(sectorUid))
+            if (!returnBy.isNullOrBlank()) append(",\"return_by\":").append(jsonString(returnBy))
+            append('}')
+        }.toByteArray(Charsets.UTF_8)
+        val (code, body) = httpRequest(
+            "POST",
+            "/api/missions/${urlSegment(missionName)}/tasks",
+            emptyList(),
+            payload,
+            "application/json",
+        )
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseTaskFromWriteResponse(body)
+            ?: throw ApiException("Task create returned no task")
+    }
+
+    /** PATCH roster entry (check-in / status). */
+    fun patchMissionRoster(missionName: String, entryUid: String, status: String): TakMissionRosterEntry {
+        val payload = """{"status":${jsonString(status)}}""".toByteArray(Charsets.UTF_8)
+        val (code, body) = httpRequest(
+            "PATCH",
+            "/api/missions/${urlSegment(missionName)}/roster/${urlSegment(entryUid)}",
+            emptyList(),
+            payload,
+            "application/json",
+        )
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseRosterFromWriteResponse(body)
+            ?: TakMissionRosterEntry(uid = entryUid, displayName = "", status = status)
+    }
+
+    /** POST search sector polygon (HQ/lead). Coordinates: [[lat,lon],…]. */
+    fun createSearchSector(
+        name: String,
+        coordinates: List<Pair<Double, Double>>,
+        missionName: String? = null,
+        assignedTo: String? = null,
+        status: String = "active",
+        uid: String? = null,
+    ): TakSearchSector {
+        val coordsJson = coordinates.joinToString(prefix = "[", postfix = "]") { (lat, lon) ->
+            "[$lat,$lon]"
+        }
+        val payload = buildString {
+            append('{')
+            if (!uid.isNullOrBlank()) append("\"uid\":").append(jsonString(uid)).append(',')
+            append("\"name\":").append(jsonString(name))
+            append(",\"coordinates\":").append(coordsJson)
+            append(",\"status\":").append(jsonString(status))
+            if (!missionName.isNullOrBlank()) append(",\"mission_name\":").append(jsonString(missionName))
+            if (!assignedTo.isNullOrBlank()) append(",\"assigned_to\":").append(jsonString(assignedTo))
+            append('}')
+        }.toByteArray(Charsets.UTF_8)
+        val (code, body) = httpRequest(
+            "POST",
+            "/api/search_sectors",
+            emptyList(),
+            payload,
+            "application/json",
+        )
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseSectorFromWriteResponse(body)
+            ?: TakSearchSector(uid = uid ?: "", name = name, status = status, missionName = missionName)
+    }
+
+    fun patchSearchSectorStatus(uid: String, status: String): TakSearchSector {
+        val payload = """{"status":${jsonString(status)}}""".toByteArray(Charsets.UTF_8)
+        val (code, body) = httpRequest(
+            "PATCH",
+            "/api/search_sectors/${urlSegment(uid)}",
+            emptyList(),
+            payload,
+            "application/json",
+        )
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseSectorFromWriteResponse(body)
+            ?: TakSearchSector(uid = uid, name = "", status = status)
+    }
+
+    fun listSearchSectors(missionName: String? = null): List<TakSearchSector> {
+        val q = if (missionName.isNullOrBlank()) emptyList()
+        else listOf("mission" to missionName)
+        val (code, body) = httpRequest("GET", "/api/search_sectors", q, null, null)
+        if (code == 404) return emptyList()
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseSearchSectors(body)
+    }
+
+    /** HQ trail history for peer tracks overlay. */
+    fun getTracks(sinceHours: Int = 6, maxPoints: Int = 2000): List<TakTrackTrail> {
+        val since = java.time.Instant.now().minusSeconds(sinceHours.toLong() * 3600)
+            .toString()
+        val (code, body) = httpRequest(
+            "GET",
+            "/api/tracks",
+            listOf(
+                "since" to since,
+                "min_interval_s" to "8",
+                "max_points" to maxPoints.toString(),
+            ),
+            null,
+            null,
+        )
+        if (code == 404) return emptyList()
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseTracks(body)
+    }
+
     // ------------------------------------------------------------------
     // JSON parsing — tolerant of the three envelope shapes.
     // ------------------------------------------------------------------
@@ -311,6 +448,93 @@ class TakRestApiClient(
             status = o.str("status") ?: "active",
         )
     }
+
+    private fun parseTaskFromWriteResponse(body: String): TakMissionTask? {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return null
+        val taskObj = (root["task"] as? JsonObject) ?: root
+        val uid = taskObj.str("uid") ?: return null
+        val title = taskObj.str("title") ?: ""
+        return TakMissionTask(
+            uid = uid,
+            title = title,
+            body = taskObj.str("body"),
+            assignee = taskObj.str("assignee"),
+            sectorUid = taskObj.str("sector_uid"),
+            returnBy = taskObj.str("return_by"),
+            status = taskObj.str("status") ?: "issued",
+        )
+    }
+
+    private fun parseRosterFromWriteResponse(body: String): TakMissionRosterEntry? {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return null
+        val o = (root["entry"] as? JsonObject) ?: root
+        val uid = o.str("uid") ?: return null
+        return TakMissionRosterEntry(
+            uid = uid,
+            displayName = o.str("display_name") ?: "",
+            callsign = o.str("callsign"),
+            phone = o.str("phone"),
+            transport = o.str("transport"),
+            skills = o.str("skills"),
+            roleOnOp = o.str("role_on_op"),
+            status = o.str("status") ?: "expected",
+        )
+    }
+
+    private fun parseSectorFromWriteResponse(body: String): TakSearchSector? {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return null
+        val o = (root["sector"] as? JsonObject) ?: root
+        return sectorFromJson(o)
+    }
+
+    internal fun parseSearchSectors(body: String): List<TakSearchSector> {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull()
+        val arr = when (root) {
+            is JsonArray -> root
+            is JsonObject -> (root["results"] ?: root["data"] ?: root["sectors"]) as? JsonArray
+            else -> null
+        } ?: return emptyList()
+        return arr.mapNotNull { el -> sectorFromJson(el as? JsonObject ?: return@mapNotNull null) }
+    }
+
+    private fun sectorFromJson(o: JsonObject): TakSearchSector? {
+        val uid = o.str("uid") ?: return null
+        return TakSearchSector(
+            uid = uid,
+            name = o.str("name") ?: uid,
+            status = o.str("status") ?: "active",
+            missionName = o.str("mission_name"),
+            assignedTo = o.str("assigned_to"),
+        )
+    }
+
+    internal fun parseTracks(body: String): List<TakTrackTrail> {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return emptyList()
+        val arr = (root["results"] as? JsonArray) ?: return emptyList()
+        return arr.mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val deviceUid = o.str("device_uid") ?: return@mapNotNull null
+            val ptsArr = o["points"] as? JsonArray ?: return@mapNotNull null
+            val points = ptsArr.mapNotNull { p ->
+                val po = p as? JsonObject ?: return@mapNotNull null
+                val lat = (po["lat"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                    ?: return@mapNotNull null
+                val lon = (po["lon"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                    ?: return@mapNotNull null
+                lat to lon
+            }
+            if (points.size < 2) return@mapNotNull null
+            TakTrackTrail(
+                deviceUid = deviceUid,
+                callsign = o.str("callsign") ?: deviceUid,
+                points = points,
+            )
+        }
+    }
+
+    private fun jsonString(s: String): String =
+        "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r") + "\""
 
     /**
      * Pull the list out of whichever envelope the dialect used:
@@ -631,4 +855,20 @@ data class TakMissionSubject(
     val notes: String? = null,
     val photoHash: String? = null,
     val status: String = "active",
+)
+
+/** Search sector from OTS `/api/search_sectors`. */
+data class TakSearchSector(
+    val uid: String,
+    val name: String,
+    val status: String = "active",
+    val missionName: String? = null,
+    val assignedTo: String? = null,
+)
+
+/** One EUD trail from `/api/tracks`. */
+data class TakTrackTrail(
+    val deviceUid: String,
+    val callsign: String,
+    val points: List<Pair<Double, Double>>,
 )

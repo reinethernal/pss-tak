@@ -38,6 +38,7 @@ object Loc {
         // displayName is the endonym — the language's own name, which is
         // what users scanning a language list expect to see.
         ENGLISH("en", "English", "🇬🇧"),
+        RUSSIAN("ru", "Русский", "🇷🇺"),
         TRADITIONAL_CHINESE("zh-Hant", "繁體中文", "🇹🇼"),
         POLISH("pl", "Polski", "🇵🇱"),
         GERMAN("de", "Deutsch", "🇩🇪"),
@@ -59,7 +60,7 @@ object Loc {
     /** The active language. Reads inside composition are tracked by the
      *  Compose snapshot system, so a change recomposes every view that
      *  resolved a string through [t]. */
-    var current by mutableStateOf(Language.ENGLISH)
+    var current by mutableStateOf(Language.RUSSIAN)
         private set
 
     /** Initialise once at process start (Application.onCreate), before any
@@ -116,13 +117,17 @@ object Loc {
                 continue // Simplified Chinese — we don't ship it; keep scanning.
             }
             when (lang) {
+                "ru" -> return Language.RUSSIAN
                 "pl" -> return Language.POLISH
                 "de" -> return Language.GERMAN
                 "fr" -> return Language.FRENCH
+                "es" -> return Language.SPANISH
+                "uk" -> return Language.UKRAINIAN
             }
             Language.fromCode(lang)?.let { return it }
         }
-        return Language.ENGLISH
+        // PSR default when device locale is unrecognized
+        return Language.RUSSIAN
     }
 
     private val TRADITIONAL_REGIONS = setOf("TW", "HK", "MO")

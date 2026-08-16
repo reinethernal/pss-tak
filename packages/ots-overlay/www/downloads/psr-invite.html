@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Приглашение в ПСР</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --fg:#e8eef7; --muted:#9aa8bc; --acc:#3d9cf0; --ok:#3dd68c; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--fg); padding:16px; }
+    .card { background:var(--card); border-radius:12px; padding:16px; max-width:560px; margin:0 auto 12px; }
+    h1 { font-size:1.25rem; margin:0 0 8px; }
+    .muted { color:var(--muted); font-size:.92rem; }
+    a.btn, button.btn {
+      display:inline-block; margin:6px 6px 0 0; padding:10px 14px; border-radius:8px;
+      background:var(--acc); color:#fff; text-decoration:none; border:0; font-weight:600; cursor:pointer;
+    }
+    a.btn.secondary { background:#2a3548; }
+    code, .mono { font-family: ui-monospace, monospace; word-break:break-all; }
+    ul { padding-left:1.2rem; }
+    .err { color:#ff8a8a; }
+    .ok { color:var(--ok); }
+  </style>
+</head>
+<body>
+  <div class="card" id="main">
+    <h1>Подключение к ПСР</h1>
+    <p class="muted">Откройте ссылку, которую прислал штаб. Здесь — логин, сертификат и настройки.</p>
+    <p id="status" class="muted">Загрузка…</p>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const t = params.get('t') || params.get('token') || '';
+    const status = document.getElementById('status');
+    const main = document.getElementById('main');
+
+    async function load() {
+      if (!t) {
+        status.innerHTML = '<span class="err">В ссылке нет токена. Попросите штаб прислать персональную ссылку.</span>';
+        return;
+      }
+      try {
+        const res = await fetch('/api/psr/invite?t=' + encodeURIComponent(t));
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          status.innerHTML = '<span class="err">' + (data.error || 'Ссылка недействительна') + '</span>';
+          return;
+        }
+        const d = data.downloads || {};
+        const s = data.server || {};
+        main.innerHTML =
+          '<h1>Подключение к ПСР</h1>' +
+          '<p><strong>Логин:</strong> <span class="mono">' + data.username + '</span></p>' +
+          '<p class="muted">' + (data.hint || '') + '</p>' +
+          '<p><strong>Пароль корневого сертификата (P12):</strong> <span class="mono ok">' + (data.ca_password || 'atakatak') + '</span></p>' +
+          '<p class="muted">Сервер: ' + (s.host || '') + ' · CoT SSL :' + (s.cot_ssl || 8089) +
+          ' · enrollment :' + (s.enrollment || 8446) + '</p>' +
+          '<h2 style="font-size:1.05rem;margin:16px 0 8px">1. Приложения</h2>' +
+          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">PSS TAK (APK)</a>' +
+          '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">OpenTAK ICU</a>' +
+          '<a class="btn secondary" href="' + (d.field_kit || '/downloads/psr-field-kit.zip') + '">Комплект ATAK</a>' +
+          '<h2 style="font-size:1.05rem;margin:16px 0 8px">2. Сертификат и настройки</h2>' +
+          '<a class="btn" href="' + (d.truststore || '/downloads/truststore-root.p12') + '">Скачать truststore-root.p12</a>' +
+          '<a class="btn secondary" href="' + (d.atak_config || '/downloads/psr-atak-config.zip') + '">Настройки ATAK (zip)</a>' +
+          '<p class="muted">Пароль P12 при импорте: <strong>atakatak</strong></p>' +
+          '<h2 style="font-size:1.05rem;margin:16px 0 8px">3. Enrollment в ATAK</h2>' +
+          '<a class="btn" href="' + data.qr_string + '">Открыть enrollment в ATAK</a>' +
+          '<p class="muted mono" style="margin-top:8px">' + data.qr_string + '</p>' +
+          '<h2 style="font-size:1.05rem;margin:16px 0 8px">Кратко</h2>' +
+          '<ul class="muted">' +
+          '<li>Установите ATAK CIV (магазин) или PSS TAK из ссылки выше.</li>' +
+          '<li>Импортируйте zip настроек или нажмите enrollment.</li>' +
+          '<li>Введите логин <strong>' + data.username + '</strong> и пароль от штаба.</li>' +
+          '<li>ICU: в настройках трансляции — тот же логин/пароль OTS; путь стрима можно оставить psr.</li>' +
+          '</ul>';
+      } catch (e) {
+        status.innerHTML = '<span class="err">Ошибка сети</span>';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -27,6 +27,9 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.CropSquare
 import android.Manifest
 import android.media.MediaRecorder
 import soy.engindearing.omnitak.mobile.domain.VoiceMarkerManager
@@ -155,6 +158,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     val gridEnabled = userPrefs.gridEnabled
     val drawingsVisible = userPrefs.drawingsVisible
     val trailsVisible = userPrefs.trailsVisible
+    val fieldRole = userPrefs.fieldRole
     val aircraftVisible = userPrefs.aircraftVisible
     val vesselsVisible = userPrefs.vesselsVisible
     val contactsVisible = userPrefs.contactsVisible
@@ -348,6 +352,13 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
 
     fun toast(msg: String) {
         scope.launch { snackbar.showSnackbar(msg, withDismissAction = true) }
+    }
+
+    // Pull HQ trail history when operator enables tracks layer.
+    LaunchedEffect(trailsVisible) {
+        if (!trailsVisible) return@LaunchedEffect
+        val n = app.missionSyncManager.fetchTracksInto(app.breadcrumbTrailStore).getOrNull() ?: 0
+        if (n > 0) toast(Loc.t("map.toast.tracksLoaded", n.toString()))
     }
 
     fun publishPhotoAt(ll: LatLng, fromUri: Uri?, fromFile: File?) {
@@ -1892,17 +1903,26 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             visible = radialAnchor != null,
             anchor = radialAnchor ?: Offset.Zero,
             actions = buildList {
-                add(RadialAction("drop", Icons.Filled.Place, "Drop Marker"))
-                add(RadialAction("photo", Icons.Filled.PhotoCamera, "Photo Marker"))
-                add(RadialAction("voice", Icons.Filled.Mic, "Голос"))
-                add(RadialAction("sar", Icons.Filled.Flag, "Точка ПСР"))
-                add(RadialAction("measure", Icons.Filled.Straighten, "Measure"))
+                add(RadialAction("drop", Icons.Filled.Place, Loc.t("map.radial.drop")))
+                add(RadialAction("photo", Icons.Filled.PhotoCamera, Loc.t("map.radial.photo")))
+                add(RadialAction("voice", Icons.Filled.Mic, Loc.t("map.radial.voice")))
+                add(RadialAction("sar", Icons.Filled.Flag, Loc.t("map.radial.sar")))
+                if (fieldRole.canSendAlert) {
+                    add(RadialAction("alert", Icons.Filled.Warning, Loc.t("map.radial.alert")))
+                }
+                if (fieldRole.canDrawSectorToServer) {
+                    add(RadialAction("sector", Icons.Filled.CropSquare, Loc.t("map.radial.sector")))
+                }
+                if (fieldRole.canOpenEvac) {
+                    add(RadialAction("evac", Icons.Filled.LocalHospital, Loc.t("map.radial.evac")))
+                }
+                add(RadialAction("measure", Icons.Filled.Straighten, Loc.t("map.radial.measure")))
                 // "Navigate" removed — Android has no route-planning /
                 // turn-by-turn engine yet (iOS executeNavigate rides
                 // routePlanningService). Re-add when that engine lands;
                 // an action that does nothing is worse than no action.
-                add(RadialAction("layers", Icons.Filled.Layers, "Layers"))
-                add(RadialAction("copy", Icons.Filled.LocationOn, "Copy Coords"))
+                add(RadialAction("layers", Icons.Filled.Layers, Loc.t("map.radial.layers")))
+                add(RadialAction("copy", Icons.Filled.LocationOn, Loc.t("map.radial.copy")))
                 if (uasConnected) {
                     // Ground/surface vehicles drive rather than fly — swap
                     // the verb so the menu reads naturally for a UGV/USV.
@@ -1917,8 +1937,8 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                     add(RadialAction("uas_circle", Icons.Filled.RadioButtonUnchecked, "Circle Mission"))
                     add(RadialAction("uas_survey", Icons.Filled.GridOn, "Survey Area"))
                 }
-                add(RadialAction("center", Icons.Filled.Explore, "Center"))
-                add(RadialAction("add", Icons.Filled.Add, "Add"))
+                add(RadialAction("center", Icons.Filled.Explore, Loc.t("map.radial.center")))
+                add(RadialAction("add", Icons.Filled.Add, Loc.t("map.radial.add")))
                 // Plugin-contributed radial actions (none from the bundled
                 // ADS-B plugin; exercised by the probe plugin + unit tests).
                 app.pluginHost.radialActions.forEach { r ->
@@ -1944,6 +1964,40 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         else voiceRecordDialogOpen = true
                     }
                     "sar" -> if (ll != null) sarPaletteLatLng = ll
+                    "alert" -> if (ll != null) {
+                        scope.launch {
+                            val uid = "alert-${System.currentTimeMillis()}"
+                            val xml = soy.engindearing.omnitak.mobile.domain.CotBuilders
+                                .buildEmergencyAlertEvent(
+                                    uid = uid,
+                                    callsign = userPrefs.callsign,
+                                    lat = ll.latitude,
+                                    lon = ll.longitude,
+                                )
+                            runCatching { app.serverManager.sendCoT(xml) }
+                            toast(Loc.t("map.toast.alertSent"))
+                        }
+                    }
+                    "sector" -> {
+                        drawingKind = DrawingKind.POLYGON
+                        drawingPoints = emptyList()
+                        toast("Drawing sector — tap to add points")
+                    }
+                    "evac" -> if (ll != null) {
+                        scope.launch {
+                            val uid = "evac-${System.currentTimeMillis()}"
+                            val xml = soy.engindearing.omnitak.mobile.domain.CotBuilders
+                                .buildEvacPointEvent(
+                                    uid = uid,
+                                    callsign = "EVAC-${userPrefs.callsign}",
+                                    lat = ll.latitude,
+                                    lon = ll.longitude,
+                                    remarks = "psr:evac",
+                                )
+                            runCatching { app.serverManager.sendCoT(xml) }
+                            toast(Loc.t("map.toast.evacSent"))
+                        }
+                    }
                     // "Add" = quick-add at the long-press point — same
                     // marker-creation sheet as Drop (GAP-052 parity with
                     // iOS RadialMenuActionExecutor).
@@ -2076,7 +2130,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                     photoSourcePickerOpen = false
                     photoPendingLatLng = null
                 },
-                title = { Text("Photo marker") },
+                title = { Text(Loc.t("map.photo.title")) },
                 text = { Text("Attach a photo at this map location (ATAK-compatible).") },
                 confirmButton = {
                     TextButton(onClick = {
@@ -2102,7 +2156,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                     voiceRecordDialogOpen = false
                     voicePendingLatLng = null
                 },
-                title = { Text("Голосовая метка") },
+                title = { Text(Loc.t("map.voice.title")) },
                 text = {
                     Text(
                         if (voiceRecording) "Идёт запись… нажмите «Стоп и отправить»"
@@ -2449,6 +2503,20 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                                         remarks = "psr:sector",
                                     )
                                 runCatching { app.serverManager.sendCoT(xml) }
+                                if (fieldRole.canDrawSectorToServer) {
+                                    val serverId = app.serverManager.activeServer.value?.id
+                                    if (serverId != null) {
+                                        app.missionSyncManager.createSector(
+                                            serverId = serverId,
+                                            name = "Сектор",
+                                            coordinates = pts,
+                                            missionName = null,
+                                            uid = id,
+                                        ).onSuccess {
+                                            toast(Loc.t("map.toast.sectorPosted"))
+                                        }
+                                    }
+                                }
                             }
                         }
                         toast("Saved ${kind.name.lowercase()}")

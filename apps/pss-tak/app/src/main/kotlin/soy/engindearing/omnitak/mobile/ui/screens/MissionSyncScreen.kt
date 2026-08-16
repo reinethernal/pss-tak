@@ -298,6 +298,11 @@ fun MissionSyncScreen(onBack: () -> Unit = {}) {
         }
     }
 
+    val userPrefs by app.userPrefsStore.prefs.collectAsState(
+        initial = soy.engindearing.omnitak.mobile.data.UserPrefs(),
+    )
+    val fieldRole = userPrefs.fieldRole
+
     missionDetail?.let { m ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
@@ -313,6 +318,54 @@ fun MissionSyncScreen(onBack: () -> Unit = {}) {
                 serverName = m.serverName,
                 loading = missionOpsLoading,
                 ops = missionOps,
+                fieldRole = fieldRole,
+                onAck = { task ->
+                    scope.launch {
+                        manager.patchTaskStatus(m.serverId, m.mission.name, task.uid, "acked")
+                            .onSuccess {
+                                toast(Loc.t("mission.task.acked"))
+                                missionOps = manager.fetchMissionOps(m.serverId, m.mission.name).getOrNull()
+                            }
+                            .onFailure { toast(it.message ?: "error") }
+                    }
+                },
+                onDone = { task ->
+                    scope.launch {
+                        manager.patchTaskStatus(m.serverId, m.mission.name, task.uid, "done")
+                            .onSuccess {
+                                toast(Loc.t("mission.task.done"))
+                                missionOps = manager.fetchMissionOps(m.serverId, m.mission.name).getOrNull()
+                            }
+                            .onFailure { toast(it.message ?: "error") }
+                    }
+                },
+                onCheckIn = { entry ->
+                    scope.launch {
+                        manager.patchRosterStatus(m.serverId, m.mission.name, entry.uid, "arrived")
+                            .onSuccess {
+                                toast(Loc.t("mission.roster.checkedIn"))
+                                missionOps = manager.fetchMissionOps(m.serverId, m.mission.name).getOrNull()
+                            }
+                            .onFailure { toast(it.message ?: "error") }
+                    }
+                },
+                onCreateTask = { title, body, assignee ->
+                    scope.launch {
+                        manager.createTask(m.serverId, m.mission.name, title, body, assignee, null, null)
+                            .onSuccess {
+                                toast(Loc.t("mission.task.created"))
+                                missionOps = manager.fetchMissionOps(m.serverId, m.mission.name).getOrNull()
+                            }
+                            .onFailure { toast(it.message ?: "error") }
+                    }
+                },
+                onMarkSectorCleared = { sectorUid ->
+                    scope.launch {
+                        manager.patchSectorStatus(m.serverId, sectorUid, "cleared")
+                            .onSuccess { toast(Loc.t("mission.sector.cleared")) }
+                            .onFailure { toast(it.message ?: "error") }
+                    }
+                },
             )
         }
     }
@@ -549,7 +602,18 @@ private fun MissionOpsSheet(
     serverName: String,
     loading: Boolean,
     ops: MissionOpsSnapshot?,
+    fieldRole: soy.engindearing.omnitak.mobile.data.FieldRole,
+    onAck: (TakMissionTask) -> Unit,
+    onDone: (TakMissionTask) -> Unit,
+    onCheckIn: (TakMissionRosterEntry) -> Unit,
+    onCreateTask: (title: String, body: String?, assignee: String?) -> Unit,
+    onMarkSectorCleared: (sectorUid: String) -> Unit,
 ) {
+    var createOpen by remember { mutableStateOf(false) }
+    var newTitle by remember { mutableStateOf("") }
+    var newBody by remember { mutableStateOf("") }
+    var newAssignee by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -594,12 +658,52 @@ private fun MissionOpsSheet(
         Spacer(Modifier.height(20.dp))
         val tasks = ops?.tasks.orEmpty()
         val roster = ops?.roster.orEmpty()
-        Text(
-            "ЗАДАНИЯ (${tasks.size})",
-            color = TacticalAccent,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "ЗАДАНИЯ (${tasks.size})",
+                color = TacticalAccent,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            if (fieldRole.canCreateTask) {
+                TextButton(onClick = { createOpen = !createOpen }) {
+                    Text(if (createOpen) Loc.t("common.cancel") else Loc.t("mission.task.create"), color = TacticalAccent)
+                }
+            }
+        }
+        if (createOpen && fieldRole.canCreateTask) {
+            OutlinedTextField(
+                value = newTitle,
+                onValueChange = { newTitle = it },
+                label = { Text(Loc.t("mission.task.title")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = newAssignee,
+                onValueChange = { newAssignee = it },
+                label = { Text(Loc.t("mission.task.assignee")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = newBody,
+                onValueChange = { newBody = it },
+                label = { Text(Loc.t("mission.task.body")) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = {
+                    if (newTitle.isNotBlank()) {
+                        onCreateTask(newTitle.trim(), newBody.takeIf { it.isNotBlank() }, newAssignee.takeIf { it.isNotBlank() })
+                        newTitle = ""; newBody = ""; newAssignee = ""; createOpen = false
+                    }
+                },
+                enabled = newTitle.isNotBlank(),
+            ) { Text(Loc.t("mission.task.create")) }
+            Spacer(Modifier.height(8.dp))
+        }
         Spacer(Modifier.height(8.dp))
         if (tasks.isEmpty()) {
             Text(
@@ -608,7 +712,17 @@ private fun MissionOpsSheet(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
-            tasks.forEach { TaskCard(it) }
+            tasks.forEach { task ->
+                TaskCard(
+                    task = task,
+                    canAct = fieldRole.canAckTasks,
+                    onAck = { onAck(task) },
+                    onDone = { onDone(task) },
+                    onClearSector = task.sectorUid?.takeIf { fieldRole.canMarkSectorCleared }?.let { uid ->
+                        { onMarkSectorCleared(uid) }
+                    },
+                )
+            }
         }
         Spacer(Modifier.height(20.dp))
         Text(
@@ -625,7 +739,13 @@ private fun MissionOpsSheet(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
-            roster.forEach { RosterCard(it) }
+            roster.forEach { entry ->
+                RosterCard(
+                    entry = entry,
+                    canCheckIn = fieldRole.canCheckInRoster,
+                    onCheckIn = { onCheckIn(entry) },
+                )
+            }
         }
     }
 }
@@ -674,7 +794,13 @@ private fun SubjectCard(subject: TakMissionSubject) {
 }
 
 @Composable
-private fun TaskCard(task: TakMissionTask) {
+private fun TaskCard(
+    task: TakMissionTask,
+    canAct: Boolean,
+    onAck: () -> Unit,
+    onDone: () -> Unit,
+    onClearSector: (() -> Unit)?,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -713,11 +839,27 @@ private fun TaskCard(task: TakMissionTask) {
             Spacer(Modifier.height(6.dp))
             Text(it, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
         }
+        if (canAct && task.status !in setOf("done")) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (task.status == "issued" || task.status == "overdue") {
+                    TextButton(onClick = onAck) { Text(Loc.t("mission.task.ack"), color = TacticalAccent) }
+                }
+                TextButton(onClick = onDone) { Text(Loc.t("mission.task.markDone"), color = TacticalAccent) }
+                onClearSector?.let { clear ->
+                    TextButton(onClick = clear) { Text(Loc.t("mission.sector.cleared"), color = TacticalAccent) }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun RosterCard(entry: TakMissionRosterEntry) {
+private fun RosterCard(
+    entry: TakMissionRosterEntry,
+    canCheckIn: Boolean,
+    onCheckIn: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -750,6 +892,12 @@ private fun RosterCard(entry: TakMissionRosterEntry) {
         bits.forEach {
             Spacer(Modifier.height(2.dp))
             Text(it, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), style = MaterialTheme.typography.bodySmall)
+        }
+        if (canCheckIn && entry.status == "expected") {
+            Spacer(Modifier.height(6.dp))
+            TextButton(onClick = onCheckIn) {
+                Text(Loc.t("mission.roster.checkIn"), color = TacticalAccent)
+            }
         }
     }
 }

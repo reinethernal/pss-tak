@@ -81,7 +81,7 @@ public class Preferences {
     public static final String ATAK_SEND_COT = "send_cot";
     public static final boolean ATAK_SEND_COT_DEFAULT = true;
     public static final String ATAK_SEND_STREAM_DETAILS = "send_stream_details";
-    public static final boolean ATAK_SEND_STREAM_DETAILS_DEFAULT = false;
+    public static final boolean ATAK_SEND_STREAM_DETAILS_DEFAULT = true;
     public static final String ATAK_SERVER_ADDRESS = "atak_address";
     public static final String ATAK_SERVER_ADDRESS_DEFAULT = "fts.plasmadancer.ru";
     public static final String ATAK_SERVER_PORT = "atak_port";

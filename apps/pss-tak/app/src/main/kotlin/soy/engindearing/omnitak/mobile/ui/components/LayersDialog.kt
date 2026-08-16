@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalAccent
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalBackground
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalSurface
+import soy.engindearing.omnitak.mobile.i18n.Loc
 
 /**
  * Map overlay visibility picker. One switch per toggleable layer;
@@ -58,23 +59,23 @@ fun LayersDialog(
         containerColor = TacticalSurface,
         title = {
             Text(
-                "Слои карты",
+                Loc.t("map.layers.title"),
                 color = MaterialTheme.colorScheme.onBackground,
                 fontFamily = FontFamily.Monospace,
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                LayerRow("3D рельеф", map3dEnabled, onToggle3d)
-                LayerRow("Контакты", contactsVisible, onToggleContacts)
-                LayerRow("Узлы mesh", meshNodesVisible, onToggleMeshNodes)
-                LayerRow("Только точки ПСР", sarPointsOnly, onToggleSarPointsOnly)
-                LayerRow("Рисунки", drawingsVisible, onToggleDrawings)
-                LayerRow("Треки", trailsVisible, onToggleTrails)
-                LayerRow("Воздух (ADS-B)", aircraftVisible, onToggleAircraft)
-                LayerRow("Суда (AIS)", vesselsVisible, onToggleVessels)
-                LayerRow("Сетка lat/lon", gridEnabled, onToggleGrid)
-                LayerRow("Карточка позывного", callsignCardVisible, onToggleCallsignCard)
+                LayerRow(Loc.t("map.layers.terrain3d"), map3dEnabled, onToggle3d)
+                LayerRow(Loc.t("map.layers.contacts"), contactsVisible, onToggleContacts)
+                LayerRow(Loc.t("map.layers.mesh"), meshNodesVisible, onToggleMeshNodes)
+                LayerRow(Loc.t("map.layers.sarOnly"), sarPointsOnly, onToggleSarPointsOnly)
+                LayerRow(Loc.t("map.layers.drawings"), drawingsVisible, onToggleDrawings)
+                LayerRow(Loc.t("map.layers.trails"), trailsVisible, onToggleTrails)
+                LayerRow(Loc.t("map.layers.aircraft"), aircraftVisible, onToggleAircraft)
+                LayerRow(Loc.t("map.layers.vessels"), vesselsVisible, onToggleVessels)
+                LayerRow(Loc.t("map.layers.grid"), gridEnabled, onToggleGrid)
+                LayerRow(Loc.t("map.layers.callsignCard"), callsignCardVisible, onToggleCallsignCard)
                 if (onOpenOfflineMaps != null) {
                     TextButton(
                         onClick = onOpenOfflineMaps,
@@ -83,7 +84,7 @@ fun LayersDialog(
                             .padding(top = 4.dp),
                     ) {
                         Text(
-                            "Офлайн-карты…",
+                            Loc.t("map.layers.offline"),
                             color = TacticalAccent,
                             fontFamily = FontFamily.Monospace,
                         )
@@ -93,7 +94,7 @@ fun LayersDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Готово", color = TacticalAccent)
+                Text(Loc.t("map.layers.done"), color = TacticalAccent)
             }
         },
     )

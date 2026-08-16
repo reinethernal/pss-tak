@@ -137,6 +137,58 @@ fun SettingsScreen(
                 onSelect = { v -> mutate { it.copy(team = v) } },
             )
 
+            SectionHeader(Loc.t("settings.section.fieldRole"))
+            SegmentedRow(
+                options = listOf(
+                    soy.engindearing.omnitak.mobile.data.FieldRole.SEARCHER to Loc.t("settings.fieldRole.searcher"),
+                    soy.engindearing.omnitak.mobile.data.FieldRole.LEAD to Loc.t("settings.fieldRole.lead"),
+                    soy.engindearing.omnitak.mobile.data.FieldRole.FIELD_HQ to Loc.t("settings.fieldRole.fieldHq"),
+                ),
+                selected = prefs.fieldRole,
+                onSelect = { v -> mutate { it.copy(fieldRole = v) } },
+            )
+            Text(
+                Loc.t("settings.fieldRole.desc"),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+
+            SectionHeader(Loc.t("settings.section.psrTools"))
+            val settingsCtx = LocalContext.current
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(TacticalSurface)
+                    .clickable {
+                        val pkg = prefs.icuPackageId
+                        runCatching {
+                            val intent = settingsCtx.packageManager.getLaunchIntentForPackage(pkg)
+                                ?: android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    data = android.net.Uri.parse("https://fts.plasmadancer.ru/downloads/OpenTAK_ICU-PSR-latest.apk")
+                                }
+                            settingsCtx.startActivity(intent)
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(Loc.t("settings.openIcu"), color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        Loc.t("settings.openIcu.desc"),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text("›", color = TacticalAccent, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                Loc.t("settings.mbtiles.hint"),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+
             // ── Configuration Profiles ──────────────────────────────────────
             // Profiles let a captain snapshot their config and share it with
             // teammates via a QR code (omnitak://profile?d=…). Active profile

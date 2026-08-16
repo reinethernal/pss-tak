@@ -6,18 +6,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * #156 — i18n parity. OmniTAK now ships 7 UI languages (adds Español +
- * Українська). These pin the catalogue contract so a language can't ship a
- * typo'd/stray key and the new languages can't silently regress to stubs.
+ * i18n parity. OmniTAK / PSS TAK ships 8 UI languages (incl. Русский).
  */
 class LocStringsTest {
 
     private fun keys(l: Loc.Language) = LocStrings.catalogue(l).keys
 
-    @Test fun ships_seven_languages_including_es_and_uk() {
+    @Test fun ships_eight_languages_including_ru_es_and_uk() {
         val codes = Loc.Language.entries.map { it.code }
-        assertEquals(7, codes.size)
-        assertTrue(codes.containsAll(listOf("en", "zh-Hant", "pl", "de", "fr", "es", "uk")))
+        assertEquals(8, codes.size)
+        assertTrue(codes.containsAll(listOf("en", "ru", "zh-Hant", "pl", "de", "fr", "es", "uk")))
     }
 
     @Test fun no_language_has_a_key_absent_from_english() {
@@ -26,6 +24,11 @@ class LocStringsTest {
             val stray = keys(lang) - en
             assertTrue("$lang has keys not present in English (typo?): $stray", stray.isEmpty())
         }
+    }
+
+    @Test fun russian_covers_all_english_keys() {
+        val missing = keys(Loc.Language.ENGLISH) - keys(Loc.Language.RUSSIAN)
+        assertTrue("RU missing keys: $missing", missing.isEmpty())
     }
 
     @Test fun new_languages_cover_at_least_the_european_onboarding_set() {
@@ -40,7 +43,7 @@ class LocStringsTest {
 
     @Test fun new_languages_are_actually_translated_not_english_passthrough() {
         val en = LocStrings.catalogue(Loc.Language.ENGLISH)
-        for (lang in listOf(Loc.Language.SPANISH, Loc.Language.UKRAINIAN)) {
+        for (lang in listOf(Loc.Language.SPANISH, Loc.Language.UKRAINIAN, Loc.Language.RUSSIAN)) {
             val cat = LocStrings.catalogue(lang)
             assertNotEquals("$lang onboarding.skip not translated", en["onboarding.skip"], cat["onboarding.skip"])
             assertNotEquals("$lang page1.title not translated", en["onboarding.page1.title"], cat["onboarding.page1.title"])
