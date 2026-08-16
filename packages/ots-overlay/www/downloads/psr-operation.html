@@ -20,6 +20,15 @@
     .tabs button { cursor:pointer; }
     .tabs button.active { background:var(--acc); border-color:var(--acc); }
     .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px; }
+    .card.due-overdue { border-color:#c44; box-shadow:0 0 0 1px #c44 inset; }
+    .card.due-warn { border-color:#c90; }
+    .due-banner { display:none; padding:10px 12px; border-radius:8px; margin-bottom:12px; border:1px solid var(--line); }
+    .due-banner.show { display:block; }
+    .due-banner.overdue { background:#3a1818; border-color:#c44; }
+    .due-banner.warn { background:#3a3010; border-color:#c90; }
+    .timer { font-variant-numeric:tabular-nums; font-weight:600; }
+    .timer.overdue { color:#f66; }
+    .timer.warn { color:#fc6; }
     .muted { color:var(--mut); font-size:13px; }
     table { width:100%; border-collapse:collapse; font-size:14px; }
     th, td { border-bottom:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
@@ -42,6 +51,7 @@
   </header>
   <div class="wrap">
     <div id="status" class="muted"></div>
+    <div id="due-banner" class="due-banner"></div>
     <div class="tabs">
       <button type="button" class="active" data-tab="subject">Ориентировка</button>
       <button type="button" data-tab="tasks">Задания</button>
@@ -102,6 +112,7 @@
           <input id="t-assignee" placeholder="Кому (группа / позывной)" style="flex:1;min-width:160px" />
           <input id="t-return" type="datetime-local" title="Срок возврата" />
         </div>
+        <p class="muted" style="margin:0 0 8px">Срок возврата — контрольный таймер штаба: предупреждение за 30 мин, при просрочке — запись в лог операции.</p>
         <div class="row">
           <select id="t-sector" style="flex:1"><option value="">— сектор —</option></select>
           <textarea id="t-body" placeholder="Текст задания" rows="2" style="flex:2;min-width:220px"></textarea>
@@ -199,6 +210,65 @@
 
     let currentSubjectUid = null;
     let openPeriodUid = null;
+    let duePollTimer = null;
+
+    function formatCountdown(secs) {
+      if (secs == null) return '';
+      const neg = secs < 0;
+      let s = Math.abs(Math.floor(secs));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      let t = h > 0 ? (h + 'ч ' + m + 'м') : (m > 0 ? (m + 'м ' + sec + 'с') : (sec + 'с'));
+      return neg ? ('просрочено ' + t) : ('осталось ' + t);
+    }
+
+    function renderDueBanner(overdue, warning) {
+      const el = document.getElementById('due-banner');
+      if (!el) return;
+      if (overdue && overdue.length) {
+        el.className = 'due-banner show overdue';
+        el.innerHTML = '<strong>Просрочен возврат (' + overdue.length + '):</strong> ' +
+          overdue.slice(0, 5).map(t =>
+            (t.title || '') + (t.assignee ? ' → ' + t.assignee : '') +
+            ' <span class="timer overdue">' + formatCountdown(t.seconds_to_return) + '</span>'
+          ).join(' · ') +
+          ' <a href="#" id="due-goto-tasks">к заданиям</a>';
+        const a = document.getElementById('due-goto-tasks');
+        if (a) a.onclick = (e) => {
+          e.preventDefault();
+          document.querySelector('.tabs button[data-tab="tasks"]').click();
+          document.getElementById('t-filter').value = 'overdue';
+          loadTasks();
+        };
+      } else if (warning && warning.length) {
+        el.className = 'due-banner show warn';
+        el.innerHTML = '<strong>Скоро срок возврата (' + warning.length + '):</strong> ' +
+          warning.slice(0, 5).map(t =>
+            (t.title || '') + ' <span class="timer warn">' + formatCountdown(t.seconds_to_return) + '</span>'
+          ).join(' · ');
+      } else {
+        el.className = 'due-banner';
+        el.textContent = '';
+      }
+    }
+
+    async function loadDueBanner() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/tasks/due');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderDueBanner(data.overdue || [], data.warning || []);
+    }
+
+    function startDuePoll() {
+      if (duePollTimer) clearInterval(duePollTimer);
+      duePollTimer = setInterval(() => {
+        loadDueBanner();
+        if (!document.getElementById('tab-tasks').classList.contains('hidden')) loadTasks();
+      }, 30000);
+    }
 
     document.querySelectorAll('.tabs button').forEach(btn => {
       btn.onclick = () => {
@@ -320,18 +390,26 @@
       if (filter) rows = rows.filter(t => t.status === filter);
       const box = document.getElementById('tasks-list');
       box.innerHTML = '';
+      const overdueAll = (data.results || []).filter(t => t.due_state === 'overdue');
+      const warnAll = (data.results || []).filter(t => t.due_state === 'warn');
+      renderDueBanner(overdueAll, warnAll);
       if (!rows.length) { box.innerHTML = '<div class="muted">Заданий нет</div>'; return; }
       rows.forEach(t => {
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card' + (t.due_state === 'overdue' ? ' due-overdue' : (t.due_state === 'warn' ? ' due-warn' : ''));
         const mapLink = t.sector_uid
           ? '<a href="/map" target="_blank">показать сектор на карте</a>'
+          : '';
+        const timerHtml = t.return_by
+          ? '<div class="timer ' + (t.due_state === 'overdue' ? 'overdue' : (t.due_state === 'warn' ? 'warn' : '')) + '">' +
+            formatCountdown(t.seconds_to_return) + '</div>'
           : '';
         card.innerHTML =
           '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
           '<strong>' + (t.title || '') + '</strong>' +
           '<span class="muted">' + (STATUS_RU[t.status] || t.status) + '</span></div>' +
           '<div class="muted">' + [t.assignee ? '→ ' + t.assignee : '', t.return_by ? 'до ' + t.return_by : ''].filter(Boolean).join(' · ') + '</div>' +
+          timerHtml +
           '<div style="margin-top:6px;white-space:pre-wrap">' + (t.body || '') + '</div>' +
           '<div class="row" style="margin-top:8px">' + mapLink + '</div>';
         const actions = document.createElement('div');
@@ -632,6 +710,8 @@
       await loadTasks();
       await loadRoster();
       await loadPeriods();
+      await loadDueBanner();
+      startDuePoll();
     }
 
     document.getElementById('reload').onclick = refreshAll;

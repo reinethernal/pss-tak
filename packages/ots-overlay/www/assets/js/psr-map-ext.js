@@ -28,6 +28,8 @@
   let trackPolylines = {}; // device_uid -> { layer, callsign, lastTsMs }
   let tracksRefreshTimer = null;
   let socketHooked = false;
+  let dueBanner = null;
+  let duePollTimer = null;
   const TRACK_MIN_INTERVAL_MS = 8000;
 
   function api(path, opts) {
@@ -457,6 +459,66 @@
     });
   }
 
+  function formatCountdown(secs) {
+    if (secs == null) return "";
+    const neg = secs < 0;
+    let s = Math.abs(Math.floor(secs));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    let t = h > 0 ? h + "ч " + m + "м" : m + "м";
+    return neg ? "просрочено " + t : "осталось " + t;
+  }
+
+  async function refreshDueBanner() {
+    try {
+      const res = await api("/api/psr/tasks/due");
+      if (!res.ok) return;
+      const data = await res.json();
+      const overdue = data.overdue || [];
+      const warning = data.warning || [];
+      if (!dueBanner || !document.body.contains(dueBanner)) {
+        dueBanner = document.createElement("div");
+        dueBanner.id = "psr-due-banner";
+        document.body.appendChild(dueBanner);
+      }
+      if (!overdue.length && !warning.length) {
+        dueBanner.style.display = "none";
+        return;
+      }
+      const isOd = overdue.length > 0;
+      const rows = (isOd ? overdue : warning).slice(0, 4);
+      dueBanner.style.cssText =
+        "position:fixed;left:12px;right:360px;top:36px;z-index:5001;padding:8px 12px;border-radius:8px;font:13px system-ui,sans-serif;" +
+        (isOd
+          ? "background:rgba(80,20,20,.95);border:1px solid #c44;color:#fee;"
+          : "background:rgba(70,55,10,.95);border:1px solid #c90;color:#ffe;");
+      dueBanner.style.display = "block";
+      dueBanner.innerHTML =
+        "<strong>" +
+        (isOd ? "Просрочен возврат" : "Скоро срок возврата") +
+        " (" +
+        (isOd ? overdue.length : warning.length) +
+        "):</strong> " +
+        rows
+          .map(
+            (t) =>
+              (t.mission_name ? "[" + t.mission_name + "] " : "") +
+              (t.title || "") +
+              (t.assignee ? " → " + t.assignee : "") +
+              " · " +
+              formatCountdown(t.seconds_to_return)
+          )
+          .join(" · ") +
+        " <a href='/downloads/psr-operation.html' style='color:#8cf;margin-left:8px'>задания →</a>";
+    } catch (_) {}
+  }
+
+  function startDuePoll() {
+    refreshDueBanner();
+    if (duePollTimer) clearInterval(duePollTimer);
+    duePollTimer = setInterval(refreshDueBanner, 30000);
+  }
+
   function setStatus(t) {
     ensurePanel();
     panel.querySelector("#psr-status").textContent = t || "";
@@ -542,6 +604,7 @@
   async function tick() {
     if (!document.querySelector(".leaflet-container")) return;
     ensureBar();
+    if (!duePollTimer) startDuePoll();
     if (window.__OTS_MAP__ && window.L) {
       await ensureDraw();
       if (!missionsCache.length) await loadMissions();
