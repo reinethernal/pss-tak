@@ -519,12 +519,49 @@
     duePollTimer = setInterval(refreshDueBanner, 30000);
   }
 
+  function isMapPage() {
+    const p = (location.pathname || "").toLowerCase();
+    return p === "/map" || p.endsWith("/map") || p.includes("/map/");
+  }
+
+  function teardownHqUi() {
+    const leftover = document.getElementById("psr-filter-bar");
+    if (leftover) leftover.remove();
+    bar = null;
+    if (panel) {
+      panel.remove();
+      panel = null;
+    }
+    const orphanPanel = document.getElementById("psr-hq-panel");
+    if (orphanPanel) orphanPanel.remove();
+    if (dueBanner) {
+      dueBanner.remove();
+      dueBanner = null;
+    }
+    const orphanDue = document.getElementById("psr-due-banner");
+    if (orphanDue) orphanDue.remove();
+    if (duePollTimer) {
+      clearInterval(duePollTimer);
+      duePollTimer = null;
+    }
+    if (tracksRefreshTimer) {
+      clearInterval(tracksRefreshTimer);
+      tracksRefreshTimer = null;
+    }
+    tracksEnabled = false;
+  }
+
   function setStatus(t) {
-    ensurePanel();
-    panel.querySelector("#psr-status").textContent = t || "";
+    if (!isMapPage() || !panel) return;
+    const el = panel.querySelector("#psr-status");
+    if (el) el.textContent = t || "";
   }
 
   function ensurePanel() {
+    if (!isMapPage() || !document.querySelector(".leaflet-container")) {
+      teardownHqUi();
+      return;
+    }
     const leftover = document.getElementById("psr-filter-bar");
     if (leftover) leftover.remove();
     bar = null;
@@ -602,15 +639,18 @@
   }
 
   function ensureBar() {
-    if (!location.pathname.includes("map") && !document.querySelector(".leaflet-container")) return;
-    const leftover = document.getElementById("psr-filter-bar");
-    if (leftover) leftover.remove();
-    bar = null;
+    if (!isMapPage() || !document.querySelector(".leaflet-container")) {
+      teardownHqUi();
+      return;
+    }
     ensurePanel();
   }
 
   async function tick() {
-    if (!document.querySelector(".leaflet-container")) return;
+    if (!isMapPage() || !document.querySelector(".leaflet-container")) {
+      teardownHqUi();
+      return;
+    }
     ensureBar();
     if (!duePollTimer) startDuePoll();
     if (window.__OTS_MAP__ && window.L) {
