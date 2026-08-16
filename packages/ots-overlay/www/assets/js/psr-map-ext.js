@@ -488,7 +488,7 @@
       const isOd = overdue.length > 0;
       const rows = (isOd ? overdue : warning).slice(0, 4);
       dueBanner.style.cssText =
-        "position:fixed;left:12px;right:360px;top:36px;z-index:5001;padding:8px 12px;border-radius:8px;font:13px system-ui,sans-serif;" +
+        "position:fixed;left:12px;right:360px;bottom:16px;top:auto;z-index:900;padding:8px 12px;border-radius:8px;font:13px system-ui,sans-serif;pointer-events:auto;" +
         (isOd
           ? "background:rgba(80,20,20,.95);border:1px solid #c44;color:#fee;"
           : "background:rgba(70,55,10,.95);border:1px solid #c90;color:#ffe;");
@@ -525,16 +525,26 @@
   }
 
   function ensurePanel() {
+    const leftover = document.getElementById("psr-filter-bar");
+    if (leftover) leftover.remove();
+    bar = null;
+    if (panel && document.body.contains(panel) && !panel.querySelector("#psr-point-filters")) {
+      panel.remove();
+      panel = null;
+    }
     if (panel && document.body.contains(panel)) return;
     panel = document.createElement("div");
     panel.id = "psr-hq-panel";
     panel.style.cssText =
-      "position:fixed;right:12px;top:72px;bottom:12px;width:min(340px,92vw);z-index:5000;background:rgba(22,22,22,.94);color:#eee;border:1px solid #444;border-radius:10px;padding:12px;overflow:auto;font:13px system-ui,sans-serif";
+      "position:fixed;right:12px;top:72px;bottom:12px;width:min(340px,92vw);z-index:900;background:rgba(22,22,22,.94);color:#eee;border:1px solid #444;border-radius:10px;padding:12px;overflow:auto;font:13px system-ui,sans-serif";
     panel.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>" +
       "<strong>Секторы ПСР</strong>" +
       "<a href='/downloads/psr-operation.html' style='color:#8cf;font-size:12px'>Операция…</a></div>" +
       "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — слева. Треки = покрытие; статус сектора «пройден» — вручную.</div>" +
+      "<div id='psr-point-filters' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
+      "<div style='font-weight:600;margin-bottom:6px'>Точки ПСР</div>" +
+      "<div id='psr-filter-btns' style='display:flex;gap:6px;flex-wrap:wrap'></div></div>" +
       "<div id='psr-tracks-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<label style='display:flex;align-items:center;gap:8px;font-weight:600'>" +
       "<input type='checkbox' id='psr-tracks-on'/> Треки</label>" +
@@ -559,6 +569,25 @@
       "<div id='psr-status' style='font-size:12px;opacity:.85;min-height:1.2em;margin-bottom:6px'></div>" +
       "<div id='psr-sector-list'></div>";
     document.body.appendChild(panel);
+    const btnBox = panel.querySelector("#psr-filter-btns");
+    FILTERS.forEach((f) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = f.label;
+      btn.dataset.code = f.code;
+      btn.style.cssText =
+        "border:1px solid #555;background:#333;color:#eee;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px";
+      btn.onclick = () => {
+        activeFilter = f.code;
+        [...btnBox.querySelectorAll("button")].forEach((b) => {
+          b.style.background = b.dataset.code === activeFilter ? "#2a6" : "#333";
+        });
+        applyFilter();
+      };
+      btnBox.appendChild(btn);
+    });
+    const allBtn = btnBox.querySelector('button[data-code="all"]');
+    if (allBtn) allBtn.style.background = "#2a6";
     panel.querySelector("#psr-sector-form").onsubmit = saveSector;
     panel.querySelector("#psr-tracks-on").onchange = (e) => setTracksEnabled(e.target.checked);
     panel.querySelector("#psr-tracks-window").onchange = (e) => {
@@ -574,30 +603,9 @@
 
   function ensureBar() {
     if (!location.pathname.includes("map") && !document.querySelector(".leaflet-container")) return;
-    if (!bar || !document.body.contains(bar)) {
-      bar = document.createElement("div");
-      bar.id = "psr-filter-bar";
-      bar.style.cssText =
-        "position:fixed;top:64px;left:12px;right:360px;z-index:5000;display:flex;gap:6px;flex-wrap:wrap;background:rgba(20,20,20,.85);padding:6px 10px;border-radius:8px;max-width:calc(100vw - 380px)";
-      FILTERS.forEach((f) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = f.label;
-        btn.dataset.code = f.code;
-        btn.style.cssText =
-          "border:1px solid #555;background:#333;color:#eee;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px";
-        btn.onclick = () => {
-          activeFilter = f.code;
-          [...bar.querySelectorAll("button")].forEach((b) => {
-            b.style.background = b.dataset.code === activeFilter ? "#2a6" : "#333";
-          });
-          applyFilter();
-        };
-        bar.appendChild(btn);
-      });
-      document.body.appendChild(bar);
-      bar.querySelector('button[data-code="all"]').style.background = "#2a6";
-    }
+    const leftover = document.getElementById("psr-filter-bar");
+    if (leftover) leftover.remove();
+    bar = null;
     ensurePanel();
   }
 
