@@ -30,6 +30,9 @@
   let socketHooked = false;
   let dueBanner = null;
   let duePollTimer = null;
+  let panelOpen = false;
+  let toggleBtn = null;
+  let historyHooked = false;
   const TRACK_MIN_INTERVAL_MS = 8000;
 
   function api(path, opts) {
@@ -336,7 +339,8 @@
   }
 
   function openSaveForm(existing) {
-    ensurePanel();
+    ensurePanel(true);
+    setPanelOpen(true);
     const form = panel.querySelector("#psr-sector-form");
     form.style.display = "block";
     form.dataset.uid = existing && existing.uid ? existing.uid : "";
@@ -521,7 +525,7 @@
 
   function isMapPage() {
     const p = (location.pathname || "").toLowerCase();
-    return p === "/map" || p.endsWith("/map") || p.includes("/map/");
+    return p === "/map" || p.endsWith("/map") || /\/map(\/|$|\?)/.test(p);
   }
 
   function teardownHqUi() {
@@ -534,6 +538,12 @@
     }
     const orphanPanel = document.getElementById("psr-hq-panel");
     if (orphanPanel) orphanPanel.remove();
+    if (toggleBtn) {
+      toggleBtn.remove();
+      toggleBtn = null;
+    }
+    const orphanToggle = document.getElementById("psr-hq-toggle");
+    if (orphanToggle) orphanToggle.remove();
     if (dueBanner) {
       dueBanner.remove();
       dueBanner = null;
@@ -549,6 +559,16 @@
       tracksRefreshTimer = null;
     }
     tracksEnabled = false;
+    panelOpen = false;
+  }
+
+  function setPanelOpen(open) {
+    panelOpen = !!open;
+    if (panel) panel.style.display = panelOpen ? "block" : "none";
+    if (toggleBtn) {
+      toggleBtn.textContent = panelOpen ? "✕ ПСР" : "ПСР";
+      toggleBtn.setAttribute("aria-expanded", panelOpen ? "true" : "false");
+    }
   }
 
   function setStatus(t) {
@@ -557,7 +577,31 @@
     if (el) el.textContent = t || "";
   }
 
-  function ensurePanel() {
+  function ensureToggle() {
+    if (toggleBtn && document.body.contains(toggleBtn)) return;
+    const orphan = document.getElementById("psr-hq-toggle");
+    if (orphan) orphan.remove();
+    toggleBtn = document.createElement("button");
+    toggleBtn.id = "psr-hq-toggle";
+    toggleBtn.type = "button";
+    toggleBtn.textContent = "ПСР";
+    toggleBtn.title = "Панель секторов и точек ПСР";
+    toggleBtn.setAttribute("aria-expanded", "false");
+    // Below Mantine AppShell overlays (~200–300 navbar, ~1000 drawer/modal)
+    toggleBtn.style.cssText =
+      "position:fixed;right:14px;bottom:18px;z-index:400;padding:10px 14px;border-radius:999px;" +
+      "border:1px solid #555;background:#1e7a4a;color:#fff;font:600 13px system-ui,sans-serif;" +
+      "cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35)";
+    toggleBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!panel) ensurePanel(true);
+      setPanelOpen(!panelOpen);
+    };
+    document.body.appendChild(toggleBtn);
+  }
+
+  function ensurePanel(forceBuild) {
     if (!isMapPage() || !document.querySelector(".leaflet-container")) {
       teardownHqUi();
       return;
@@ -565,23 +609,40 @@
     const leftover = document.getElementById("psr-filter-bar");
     if (leftover) leftover.remove();
     bar = null;
+    ensureToggle();
     if (panel && document.body.contains(panel) && !panel.querySelector("#psr-point-filters")) {
       panel.remove();
       panel = null;
     }
-    if (panel && document.body.contains(panel)) return;
+    if (panel && document.body.contains(panel)) {
+      if (forceBuild) setPanelOpen(true);
+      return;
+    }
     panel = document.createElement("div");
     panel.id = "psr-hq-panel";
     panel.style.cssText =
-      "position:fixed;right:12px;top:72px;bottom:12px;width:min(340px,92vw);z-index:900;background:rgba(22,22,22,.94);color:#eee;border:1px solid #444;border-radius:10px;padding:12px;overflow:auto;font:13px system-ui,sans-serif";
+      "position:fixed;right:12px;bottom:64px;top:auto;max-height:min(70vh,640px);width:min(340px,92vw);" +
+      "z-index:400;background:rgba(22,22,22,.96);color:#eee;border:1px solid #444;border-radius:10px;" +
+      "padding:12px;overflow:auto;font:13px system-ui,sans-serif;display:none;" +
+      "box-shadow:0 8px 28px rgba(0,0,0,.45)";
     panel.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>" +
+      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px'>" +
       "<strong>Секторы ПСР</strong>" +
-      "<a href='/downloads/psr-operation.html' style='color:#8cf;font-size:12px'>Операция…</a></div>" +
-      "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — слева. Треки = покрытие; статус сектора «пройден» — вручную.</div>" +
+      "<div style='display:flex;gap:8px;align-items:center'>" +
+      "<a href='/downloads/psr-operation.html' style='color:#8cf;font-size:12px'>Операция…</a>" +
+      "<button type='button' id='psr-hq-close' style='border:1px solid #555;background:#333;color:#eee;border-radius:6px;padding:2px 8px;cursor:pointer'>✕</button>" +
+      "</div></div>" +
+      "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — слева. Треки = покрытие; «пройден» — вручную.</div>" +
       "<div id='psr-point-filters' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<div style='font-weight:600;margin-bottom:6px'>Точки ПСР</div>" +
       "<div id='psr-filter-btns' style='display:flex;gap:6px;flex-wrap:wrap'></div></div>" +
+      "<div id='psr-export-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
+      "<div style='font-weight:600;margin-bottom:6px'>Экспорт</div>" +
+      "<div style='display:flex;gap:10px;flex-wrap:wrap'>" +
+      "<a href='/api/search_sectors/export.gpx' target='_blank' style='color:#8cf'>GPX секторов</a>" +
+      "<a href='/api/search_sectors/export.kml' target='_blank' style='color:#8cf'>KML секторов</a>" +
+      "<a id='psr-track-kml' href='#' target='_blank' style='color:#8cf;font-size:12px'>KML миссии</a>" +
+      "</div></div>" +
       "<div id='psr-tracks-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<label style='display:flex;align-items:center;gap:8px;font-weight:600'>" +
       "<input type='checkbox' id='psr-tracks-on'/> Треки</label>" +
@@ -594,7 +655,7 @@
       "<input id='psr-track-uid' placeholder='Фильтр uid (пусто = все)' style='width:100%;margin-top:6px;padding:4px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
       "<div style='margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap'>" +
       "<button type='button' id='psr-tracks-reload' style='padding:4px 8px;border:1px solid #555;background:#333;color:#eee;border-radius:4px;cursor:pointer'>Обновить</button>" +
-      "<a id='psr-track-kml' href='#' target='_blank' style='color:#8cf;font-size:12px'>Экспорт KML</a></div></div>" +
+      "</div></div>" +
       "<form id='psr-sector-form' style='display:none;margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<div id='psr-form-title' style='font-weight:600;margin-bottom:6px'>Новый сектор</div>" +
       "<input name='name' placeholder='Имя сектора' style='width:100%;margin-bottom:6px;padding:6px;border-radius:4px;border:1px solid #555;background:#333;color:#eee'/>" +
@@ -606,6 +667,7 @@
       "<div id='psr-status' style='font-size:12px;opacity:.85;min-height:1.2em;margin-bottom:6px'></div>" +
       "<div id='psr-sector-list'></div>";
     document.body.appendChild(panel);
+    panel.querySelector("#psr-hq-close").onclick = () => setPanelOpen(false);
     const btnBox = panel.querySelector("#psr-filter-btns");
     FILTERS.forEach((f) => {
       const btn = document.createElement("button");
@@ -636,6 +698,7 @@
       if (tracksEnabled) loadTracks();
     };
     panel.querySelector("#psr-tracks-reload").onclick = () => loadTracks();
+    setPanelOpen(!!forceBuild);
   }
 
   function ensureBar() {
@@ -643,7 +706,36 @@
       teardownHqUi();
       return;
     }
-    ensurePanel();
+    ensurePanel(false);
+  }
+
+  function hookSpaNavigation() {
+    if (historyHooked) return;
+    historyHooked = true;
+    const wrap = (name) => {
+      const orig = history[name];
+      if (typeof orig !== "function") return;
+      history[name] = function () {
+        const r = orig.apply(this, arguments);
+        setTimeout(tick, 50);
+        return r;
+      };
+    };
+    wrap("pushState");
+    wrap("replaceState");
+    window.addEventListener("popstate", () => setTimeout(tick, 50));
+    // Opening the main OTS nav should not fight a full-height side panel
+    document.addEventListener(
+      "click",
+      (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest(".mantine-Burger-root, [data-burger], header, nav, .mantine-AppShell-navbar")) {
+          if (panelOpen) setPanelOpen(false);
+        }
+      },
+      true
+    );
   }
 
   async function tick() {
@@ -661,6 +753,7 @@
     if (activeFilter !== "all") applyFilter();
   }
 
-  setInterval(tick, 3000);
+  hookSpaNavigation();
+  setInterval(tick, 2000);
   document.addEventListener("DOMContentLoaded", () => setTimeout(tick, 800));
 })();
