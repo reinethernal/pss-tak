@@ -46,6 +46,7 @@
       <button type="button" class="active" data-tab="subject">Ориентировка</button>
       <button type="button" data-tab="tasks">Задания</button>
       <button type="button" data-tab="roster">Состав</button>
+      <button type="button" data-tab="period">Смена</button>
     </div>
 
     <section id="tab-subject">
@@ -145,6 +146,36 @@
       </div>
       <div id="roster-list"></div>
     </section>
+
+    <section id="tab-period" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">Операционный период (смена)</h3>
+        <p class="muted">Снимок состояния при закрытии. Треки и «пройден» у секторов — отдельно; здесь handoff для следующей смены.</p>
+        <div class="row">
+          <input id="p-label" placeholder="Название смены" style="flex:1" />
+          <input id="p-commander" placeholder="Командир смены" />
+          <input id="p-incoming" placeholder="Принимает" />
+          <button class="primary" type="button" id="p-open">Открыть смену</button>
+        </div>
+        <div id="p-preview" class="muted" style="margin:8px 0"></div>
+        <div class="row">
+          <button type="button" id="p-preview-btn">Снимок сейчас</button>
+          <a id="p-map-link" href="/map" target="_blank">Треки на карте →</a>
+        </div>
+      </div>
+      <div class="card" id="p-close-box" style="display:none">
+        <h3 style="margin-top:0">Закрыть открытую смену</h3>
+        <div id="p-open-meta" class="muted"></div>
+        <textarea id="p-summary" placeholder="Итог смены" rows="2" style="width:100%;margin:6px 0"></textarea>
+        <textarea id="p-findings" placeholder="Находки / результат поиска" rows="2" style="width:100%;margin:6px 0"></textarea>
+        <textarea id="p-next" placeholder="Приоритеты следующей смены" rows="2" style="width:100%;margin:6px 0"></textarea>
+        <div class="row">
+          <button class="primary" type="button" id="p-close">Закрыть и зафиксировать снимок</button>
+          <button type="button" id="p-report-open">Отчёт (открытая)</button>
+        </div>
+      </div>
+      <div id="periods-list"></div>
+    </section>
   </div>
   <script>
     const statusEl = document.getElementById('status');
@@ -162,16 +193,18 @@
     const STATUS_RU = {
       issued: 'выдано', acked: 'принято', done: 'выполнено', overdue: 'просрочено',
       expected: 'ожидается', arrived: 'прибыл', deployed: 'в поле', returned: 'вернулся',
-      active: 'активна', cleared: 'пройден', found: 'найден', cancelled: 'снята'
+      active: 'активна', cleared: 'пройден', found: 'найден', cancelled: 'снята',
+      open: 'открыта', closed: 'закрыта'
     };
 
     let currentSubjectUid = null;
+    let openPeriodUid = null;
 
     document.querySelectorAll('.tabs button').forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        ['subject', 'tasks', 'roster'].forEach(t => {
+        ['subject', 'tasks', 'roster', 'period'].forEach(t => {
           document.getElementById('tab-' + t).classList.toggle('hidden', btn.dataset.tab !== t);
         });
       };
@@ -462,11 +495,143 @@
       loadRoster();
     };
 
+    function renderPreview(snap) {
+      if (!snap) { document.getElementById('p-preview').textContent = ''; return; }
+      const sc = snap.sector_counts || {};
+      const rc = snap.roster_counts || {};
+      const ts = snap.track_summary || {};
+      document.getElementById('p-preview').textContent =
+        'Секторы: акт. ' + (sc.active || 0) + ' / пройд. ' + (sc.cleared || 0) +
+        ' · Задания в снимке: ' + (snap.tasks || []).length + ' (открытых ' + (snap.tasks_open || 0) + ')' +
+        ' · Состав: ' + Object.keys(rc).map(k => k + '=' + rc[k]).join(', ') +
+        ' · Треки: ' + (ts.devices || 0) + ' уст. / ' + (ts.points || 0) + ' точек' +
+        (snap.subject ? ' · Ориентировка: ' + snap.subject.full_name : '');
+    }
+
+    async function loadPreview() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/periods/preview');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderPreview(data.snapshot);
+    }
+
+    async function loadPeriods() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/periods');
+      if (res.status === 401) return setStatus('Войдите в кабинет OTS');
+      const data = await res.json();
+      const rows = data.results || [];
+      openPeriodUid = null;
+      const open = rows.find(p => p.status === 'open');
+      const box = document.getElementById('p-close-box');
+      if (open) {
+        openPeriodUid = open.uid;
+        box.style.display = 'block';
+        document.getElementById('p-open-meta').textContent =
+          (open.label || open.uid) + ' · с ' + (open.started_at || '');
+        document.getElementById('p-summary').value = open.summary || '';
+        document.getElementById('p-findings').value = open.findings || '';
+        document.getElementById('p-next').value = open.next_priorities || '';
+        document.getElementById('p-commander').value = open.commander || document.getElementById('p-commander').value;
+        document.getElementById('p-incoming').value = open.incoming_commander || '';
+      } else {
+        box.style.display = 'none';
+      }
+      const list = document.getElementById('periods-list');
+      if (!rows.length) {
+        list.innerHTML = '<div class="muted">Смен пока нет</div>';
+        return;
+      }
+      list.innerHTML = '';
+      rows.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML =
+          '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+          '<strong>' + (p.label || p.uid) + '</strong>' +
+          '<span class="muted">' + (STATUS_RU[p.status] || p.status) + '</span></div>' +
+          '<div class="muted">' + (p.started_at || '') + (p.ended_at ? ' → ' + p.ended_at : ' → …') + '</div>' +
+          '<div class="muted">' + [p.commander ? 'командир: ' + p.commander : '', p.incoming_commander ? 'принимает: ' + p.incoming_commander : ''].filter(Boolean).join(' · ') + '</div>';
+        const actions = document.createElement('div');
+        actions.className = 'row';
+        const rep = document.createElement('button');
+        rep.type = 'button';
+        rep.textContent = 'Отчёт';
+        rep.onclick = () => {
+          window.open('/api/missions/' + encodeURIComponent(m) + '/periods/' + encodeURIComponent(p.uid) + '/report', '_blank');
+        };
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.textContent = 'Копировать отчёт';
+        copy.onclick = async () => {
+          const r = await fetch('/api/missions/' + encodeURIComponent(m) + '/periods/' + encodeURIComponent(p.uid) + '/report', { credentials: 'include' });
+          const t = await r.text();
+          try { await navigator.clipboard.writeText(t); setStatus('Отчёт скопирован'); }
+          catch (_) { setStatus('Откройте «Отчёт» и скопируйте вручную'); }
+        };
+        actions.appendChild(rep);
+        actions.appendChild(copy);
+        card.appendChild(actions);
+        list.appendChild(card);
+      });
+      await loadPreview();
+    }
+
+    document.getElementById('p-open').onclick = async () => {
+      const m = missionName();
+      if (!m) return setStatus('Выберите операцию');
+      const body = {
+        label: document.getElementById('p-label').value || null,
+        commander: document.getElementById('p-commander').value || null,
+        incoming_commander: document.getElementById('p-incoming').value || null
+      };
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/periods', {
+        method: 'POST', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.status === 409) return setStatus('Уже есть открытая смена — сначала закройте её');
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('Смена открыта');
+      document.getElementById('p-label').value = '';
+      loadPeriods();
+    };
+
+    document.getElementById('p-close').onclick = async () => {
+      const m = missionName();
+      if (!m || !openPeriodUid) return;
+      if (!confirm('Закрыть смену и зафиксировать снимок?')) return;
+      const body = {
+        summary: document.getElementById('p-summary').value || null,
+        findings: document.getElementById('p-findings').value || null,
+        next_priorities: document.getElementById('p-next').value || null,
+        commander: document.getElementById('p-commander').value || null,
+        incoming_commander: document.getElementById('p-incoming').value || null
+      };
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/periods/' + encodeURIComponent(openPeriodUid) + '/close', {
+        method: 'POST', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('Смена закрыта');
+      loadPeriods();
+    };
+
+    document.getElementById('p-preview-btn').onclick = loadPreview;
+    document.getElementById('p-report-open').onclick = () => {
+      const m = missionName();
+      if (!m || !openPeriodUid) return;
+      window.open('/api/missions/' + encodeURIComponent(m) + '/periods/' + encodeURIComponent(openPeriodUid) + '/report', '_blank');
+    };
+
     async function refreshAll() {
       await loadSectors();
       await loadSubject();
       await loadTasks();
       await loadRoster();
+      await loadPeriods();
     }
 
     document.getElementById('reload').onclick = refreshAll;
