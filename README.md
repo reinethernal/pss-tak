@@ -28,7 +28,8 @@
 | [`packages/atak-config`](packages/atak-config/) | ZIP для **ATAK CIV** | Data package / field kit: хост, порты, truststore — без сборки самого ATAK |
 | [`fdroid/`](fdroid/) | Свой F-Droid | Раздача APK через GitHub Pages |
 
-Откуда взяты оригиналы и **какие правки сделаны** — в [SOURCES.md](SOURCES.md).
+Откуда взяты оригиналы и **какие правки сделаны** — в [SOURCES.md](SOURCES.md).  
+Для пользователей (что умеет сервис и когда пригодится) — [FEATURES.md](FEATURES.md).
 
 ## Свой F-Droid
 
