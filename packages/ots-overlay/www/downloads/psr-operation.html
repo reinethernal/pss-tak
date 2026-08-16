@@ -57,6 +57,7 @@
       <button type="button" data-tab="tasks">Задания</button>
       <button type="button" data-tab="roster">Состав</button>
       <button type="button" data-tab="period">Смена</button>
+      <button type="button" data-tab="log">Журнал</button>
     </div>
 
     <section id="tab-subject">
@@ -187,6 +188,35 @@
       </div>
       <div id="periods-list"></div>
     </section>
+
+    <section id="tab-log" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">Журнал решений штаба</h3>
+        <p class="muted">Отдельная лента для решений и брифингов — не путать с полевым чатом операции.</p>
+        <div class="row">
+          <select id="d-category">
+            <option value="decision">решение</option>
+            <option value="brief">брифинг</option>
+            <option value="safety">безопасность</option>
+            <option value="other">прочее</option>
+          </select>
+          <textarea id="d-body" placeholder="Текст решения / брифинга" rows="3" style="flex:1;min-width:220px"></textarea>
+          <button class="primary" type="button" id="d-create">Записать</button>
+        </div>
+        <div class="row">
+          <label>Фильтр
+            <select id="d-filter">
+              <option value="">все</option>
+              <option value="decision">решение</option>
+              <option value="brief">брифинг</option>
+              <option value="safety">безопасность</option>
+              <option value="other">прочее</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="decisions-list"></div>
+    </section>
   </div>
   <script>
     const statusEl = document.getElementById('status');
@@ -274,11 +304,15 @@
       btn.onclick = () => {
         document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        ['subject', 'tasks', 'roster', 'period'].forEach(t => {
+        ['subject', 'tasks', 'roster', 'period', 'log'].forEach(t => {
           document.getElementById('tab-' + t).classList.toggle('hidden', btn.dataset.tab !== t);
         });
       };
     });
+
+    const CAT_RU = {
+      decision: 'решение', brief: 'брифинг', safety: 'безопасность', other: 'прочее'
+    };
 
     function fillSubjectForm(s) {
       currentSubjectUid = s ? s.uid : null;
@@ -704,12 +738,73 @@
       window.open('/api/missions/' + encodeURIComponent(m) + '/periods/' + encodeURIComponent(openPeriodUid) + '/report', '_blank');
     };
 
+    async function loadDecisions() {
+      const m = missionName();
+      if (!m) return;
+      const filter = document.getElementById('d-filter').value;
+      let url = '/api/missions/' + encodeURIComponent(m) + '/decisions';
+      if (filter) url += '?category=' + encodeURIComponent(filter);
+      const res = await api(url);
+      if (res.status === 401) return setStatus('Войдите в кабинет OTS');
+      const data = await res.json();
+      const rows = data.results || [];
+      const box = document.getElementById('decisions-list');
+      if (!rows.length) {
+        box.innerHTML = '<div class="muted">Записей пока нет</div>';
+        return;
+      }
+      box.innerHTML = '';
+      rows.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML =
+          '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+          '<strong>' + (CAT_RU[d.category] || d.category) + '</strong>' +
+          '<span class="muted">' + (d.created || '') + (d.created_by ? ' · ' + d.created_by : '') + '</span></div>' +
+          '<div style="margin-top:6px;white-space:pre-wrap">' + (d.body || '') + '</div>';
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'danger';
+        del.textContent = 'Удалить';
+        del.style.marginTop = '8px';
+        del.onclick = async () => {
+          if (!confirm('Удалить запись журнала?')) return;
+          await api('/api/missions/' + encodeURIComponent(m) + '/decisions/' + encodeURIComponent(d.uid), {
+            method: 'DELETE'
+          });
+          loadDecisions();
+        };
+        card.appendChild(del);
+        box.appendChild(card);
+      });
+    }
+
+    document.getElementById('d-create').onclick = async () => {
+      const m = missionName();
+      if (!m) return setStatus('Выберите операцию');
+      const body = {
+        category: document.getElementById('d-category').value || 'decision',
+        body: document.getElementById('d-body').value || ''
+      };
+      if (!body.body.trim()) return setStatus('Введите текст');
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/decisions', {
+        method: 'POST', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      document.getElementById('d-body').value = '';
+      setStatus('Запись добавлена');
+      loadDecisions();
+    };
+    document.getElementById('d-filter').onchange = loadDecisions;
+
     async function refreshAll() {
       await loadSectors();
       await loadSubject();
       await loadTasks();
       await loadRoster();
       await loadPeriods();
+      await loadDecisions();
       await loadDueBanner();
       startDuePoll();
     }
