@@ -47,6 +47,8 @@ class ContactStore {
      * untagged path doesn't blank it.
      */
     fun ingest(event: CoTEvent, nowMs: Long = System.currentTimeMillis()) {
+        // Polygon / freehand drawings belong in DrawingStore, not the contact roster.
+        if (ShapeCot.isShapeType(event.type)) return
         _contacts.update { current ->
             val stamped = event.copy(
                 receivedAtMs = if (event.receivedAtMs != 0L) event.receivedAtMs else nowMs,

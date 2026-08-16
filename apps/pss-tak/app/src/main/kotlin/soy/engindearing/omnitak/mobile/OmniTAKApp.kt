@@ -379,14 +379,22 @@ class OmniTAKApp : Application() {
                         // #180 — tag the mesh transport so the detail sheet
                         // shows "Mesh: Meshtastic".
                         MeshCoTRouter.Destination.CONTACT -> {
-                            val tagged = event.copy(
-                                source = soy.engindearing.omnitak.mobile.data.CoTSource
-                                    .mesh("Meshtastic"),
-                            )
-                            contactStore.ingest(tagged)
-                            // #179 — offer the mesh-origin point to the gateway
-                            // relay (no-op unless on + both transports up).
-                            relayInbound(tagged)
+                            if (soy.engindearing.omnitak.mobile.domain.ShapeCot.isShapeType(event.type)) {
+                                event.rawXml?.let { xml ->
+                                    soy.engindearing.omnitak.mobile.domain.ShapeCot.parseToDrawing(xml)?.let {
+                                        drawingStore.upsert(it)
+                                    }
+                                }
+                            } else {
+                                val tagged = event.copy(
+                                    source = soy.engindearing.omnitak.mobile.data.CoTSource
+                                        .mesh("Meshtastic"),
+                                )
+                                contactStore.ingest(tagged)
+                                // #179 — offer the mesh-origin point to the gateway
+                                // relay (no-op unless on + both transports up).
+                                relayInbound(tagged)
+                            }
                         }
                     }
                 }
@@ -642,6 +650,13 @@ class OmniTAKApp : Application() {
             // event is already tagged TAK_SERVER by the inbound path above.
             inboundRelay = { event ->
                 relayInbound(event)
+                if (soy.engindearing.omnitak.mobile.domain.ShapeCot.isShapeType(event.type)) {
+                    event.rawXml?.let { xml ->
+                        soy.engindearing.omnitak.mobile.domain.ShapeCot.parseToDrawing(xml)?.let {
+                            drawingStore.upsert(it)
+                        }
+                    }
+                }
                 // Photo markers (`b-i-x-i` / fileshare): pull Mission Package
                 // into local cache so the map sheet can show a preview.
                 // Lambda runs after ServerManager is live; photoMarkerManager

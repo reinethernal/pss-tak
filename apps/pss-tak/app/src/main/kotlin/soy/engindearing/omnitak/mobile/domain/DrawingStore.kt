@@ -18,6 +18,12 @@ class DrawingStore {
         _drawings.value = _drawings.value + drawing
     }
 
+    /** Insert or replace by [Drawing.id] (inbound CoT sector sync). */
+    fun upsert(drawing: Drawing) {
+        val without = _drawings.value.filterNot { it.id == drawing.id }
+        _drawings.value = without + drawing
+    }
+
     /**
      * Issue #76 — replace a drawing in place (rename / recolor / move).
      * Matched by [Drawing.id]; a no-op if the id isn't present so a stale

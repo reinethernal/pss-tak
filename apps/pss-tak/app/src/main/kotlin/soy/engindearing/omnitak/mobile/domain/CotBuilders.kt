@@ -229,6 +229,52 @@ object CotBuilders {
         )
     }
 
+    /**
+     * ATAK-style freehand / polygon drawing (`u-d-f`) with vertex list on
+     * `<link point="lat,lon,hae …"/>`. Used for search sectors (ПСР).
+     */
+    fun buildPolygonDrawingEvent(
+        uid: String,
+        name: String,
+        points: List<Pair<Double, Double>>,
+        remarks: String = "psr:sector",
+        colorArgb: Int = 0x8000BCD4.toInt(),
+        strokeWeight: Int = 3,
+        staleSeconds: Long = 3600 * 24 * 14,
+    ): String {
+        require(points.size >= 3) { "polygon needs ≥3 vertices" }
+        val lat0 = points.first().first
+        val lon0 = points.first().second
+        val closed = if (points.first() == points.last()) points else points + points.first()
+        val linkPoints = closed.joinToString(" ") { (lat, lon) ->
+            String.format(java.util.Locale.US, "%.6f,%.6f,0.0", lat, lon)
+        }
+        val now = nowIso()
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(name.ifBlank { "Sector" })).append("\"/>")
+            append("<link point=\"").append(CotXml.escape(linkPoints)).append("\"/>")
+            append("<strokeColor value=\"").append(colorArgb).append("\"/>")
+            append("<strokeWeight value=\"").append(strokeWeight).append("\"/>")
+            append("<fillColor value=\"").append(colorArgb).append("\"/>")
+            append("<labels_on value=\"true\"/>")
+            if (remarks.isNotBlank()) {
+                append("<remarks>").append(CotXml.escape(remarks)).append("</remarks>")
+            }
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = "u-d-f",
+            how = "h-e",
+            lat = lat0,
+            lon = lon0,
+            timeIso = now,
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
+
     /** XML escape — delegates to the shared [CotXml.escape]. Kept as a
      *  public alias because non-CoT XML emitters (KML/data-package
      *  exporters) call it too. */

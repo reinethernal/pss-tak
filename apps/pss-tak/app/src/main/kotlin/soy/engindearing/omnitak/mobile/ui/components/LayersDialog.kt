@@ -37,6 +37,7 @@ fun LayersDialog(
     callsignCardVisible: Boolean,
     meshNodesVisible: Boolean = true,
     map3dEnabled: Boolean = false,
+    sarPointsOnly: Boolean = false,
     onToggleGrid: (Boolean) -> Unit,
     onToggleDrawings: (Boolean) -> Unit,
     onToggleAircraft: (Boolean) -> Unit,
@@ -44,6 +45,7 @@ fun LayersDialog(
     onToggleCallsignCard: (Boolean) -> Unit,
     onToggleMeshNodes: (Boolean) -> Unit = {},
     onToggle3d: (Boolean) -> Unit = {},
+    onToggleSarPointsOnly: (Boolean) -> Unit = {},
     onOpenOfflineMaps: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -62,6 +64,7 @@ fun LayersDialog(
                 LayerRow("3D terrain", map3dEnabled, onToggle3d)
                 LayerRow("Contacts", contactsVisible, onToggleContacts)
                 LayerRow("Mesh nodes", meshNodesVisible, onToggleMeshNodes)
+                LayerRow("ПСР точки only", sarPointsOnly, onToggleSarPointsOnly)
                 LayerRow("Drawings", drawingsVisible, onToggleDrawings)
                 LayerRow("Aircraft (ADSB)", aircraftVisible, onToggleAircraft)
                 LayerRow("Lat/Lon grid", gridEnabled, onToggleGrid)

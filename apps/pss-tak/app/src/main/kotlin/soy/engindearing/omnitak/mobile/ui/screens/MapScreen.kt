@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocationOn
@@ -195,6 +196,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // generic markerSheetLatLng pipeline so the affiliation-based UI
     // doesn't have to know about FEMA-specific fields.
     var femaPaletteLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var sarPaletteLatLng by remember { mutableStateOf<LatLng?>(null) }
     var editingMarker by remember { mutableStateOf<CoTEvent?>(null) }
     // Photo geo-marker (ATAK Quick Pic compatible): long-press → Photo → camera/gallery.
     var photoPendingLatLng by remember { mutableStateOf<LatLng?>(null) }
@@ -255,6 +257,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // callsignCardVisible, followMeActive are now read from userPrefs (above)
     // so they survive relaunch.
     var layersSheetOpen by remember { mutableStateOf(false) }
+    var sarPointsOnly by remember { mutableStateOf(false) }
     // #120 — offline map download sheet.
     var offlineMapsOpen by remember { mutableStateOf(false) }
     // #154 — military report entry sheet (MEDEVAC / SALUTE / SPOTREP).
@@ -533,13 +536,21 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // bug class "wired into one engine but missing from the other" (VC 77's
     // dead 3D zoom buttons came from exactly this split).
     val visibleContacts: List<soy.engindearing.omnitak.mobile.data.CoTEvent> =
-        if (contactsVisible) {
-            if (meshNodesVisible) contacts.values.toList()
-            // Hide mesh-origin contacts — they all share the `MESHTASTIC-`
-            // UID prefix produced by `MeshtasticCoTConverter.takUid`.
-            else contacts.values.filterNot { it.uid.startsWith("MESHTASTIC-") }
-        } else {
-            emptyList()
+        run {
+            val base = if (contactsVisible) {
+                if (meshNodesVisible) contacts.values.toList()
+                else contacts.values.filterNot { it.uid.startsWith("MESHTASTIC-") }
+            } else {
+                emptyList()
+            }
+            if (sarPointsOnly) {
+                base.filter {
+                    soy.engindearing.omnitak.mobile.data.SarPointCatalog
+                        .fromRemarksOrCallsign(it.remarks, it.callsign) != null
+                }
+            } else {
+                base
+            }
         }
     // Native contacts (#77) + drawings (#80) render through the Annotation API,
     // which only re-renders on camera-idle or a style reload — so a marker
@@ -1604,6 +1615,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 ToolEntry("chat", Icons.Filled.Chat, "Chat"),
                 ToolEntry("missionsync", Icons.Filled.Sync, "Mission Sync"),
                 ToolEntry("fema", Icons.Filled.LocalFireDepartment, "FEMA / IC"),
+                ToolEntry("sar", Icons.Filled.Flag, "ПСР точки"),
                 ToolEntry("teams", Icons.Filled.Groups, "Teams"),
                 ToolEntry(
                     "nav",
@@ -1638,6 +1650,12 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         val lat = app.mapCameraStore.lastTargetLat
                         val lon = app.mapCameraStore.lastTargetLon
                         femaPaletteLatLng = if (lat != null && lon != null) LatLng(lat, lon)
+                        else selfFix?.let { LatLng(it.lat, it.lon) } ?: FALLBACK_GLOBAL_VIEW
+                    }
+                    "sar" -> {
+                        val lat = app.mapCameraStore.lastTargetLat
+                        val lon = app.mapCameraStore.lastTargetLon
+                        sarPaletteLatLng = if (lat != null && lon != null) LatLng(lat, lon)
                         else selfFix?.let { LatLng(it.lat, it.lon) } ?: FALLBACK_GLOBAL_VIEW
                     }
                     "teams" -> teamsPanelOpen = true
@@ -1765,6 +1783,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             actions = buildList {
                 add(RadialAction("drop", Icons.Filled.Place, "Drop Marker"))
                 add(RadialAction("photo", Icons.Filled.PhotoCamera, "Photo Marker"))
+                add(RadialAction("sar", Icons.Filled.Flag, "SAR Point"))
                 add(RadialAction("measure", Icons.Filled.Straighten, "Measure"))
                 // "Navigate" removed — Android has no route-planning /
                 // turn-by-turn engine yet (iOS executeNavigate rides
@@ -1804,6 +1823,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         photoPendingLatLng = ll
                         photoSourcePickerOpen = true
                     }
+                    "sar" -> if (ll != null) sarPaletteLatLng = ll
                     // "Add" = quick-add at the long-press point — same
                     // marker-creation sheet as Drop (GAP-052 parity with
                     // iOS RadialMenuActionExecutor).
@@ -2195,6 +2215,40 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             onDismiss = { femaPaletteLatLng = null },
         )
 
+        soy.engindearing.omnitak.mobile.ui.components.SarPointPaletteSheet(
+            visible = sarPaletteLatLng != null,
+            latLng = sarPaletteLatLng,
+            onConfirm = { picked ->
+                val ll = sarPaletteLatLng
+                if (ll != null) {
+                    val uid = "local-sar-${System.currentTimeMillis()}"
+                    val remarks = picked.point.buildRemarks(picked.remarksExtra)
+                    val colorArgb = picked.point.argbHex.toLong(16).toInt()
+                    val event = soy.engindearing.omnitak.mobile.data.CoTEvent(
+                        uid = uid,
+                        type = picked.point.cotType,
+                        lat = ll.latitude,
+                        lon = ll.longitude,
+                        hae = 0.0,
+                        callsign = picked.name.ifBlank { picked.point.kind.callsign },
+                        remarks = remarks,
+                        colorArgb = colorArgb,
+                        source = soy.engindearing.omnitak.mobile.data.CoTSource.LOCAL,
+                    )
+                    app.contactStore.ingest(event)
+                    scope.launch {
+                        val xml = soy.engindearing.omnitak.mobile.domain.CotBuilders
+                            .rebuildEvent(event, destUids = emptyList())
+                        runCatching { app.serverManager.sendCoT(xml) }
+                        runCatching { app.activeMeshManager.sendCoTOverMesh(event) }
+                    }
+                    toast("ПСР: ${picked.point.kind.callsign} «${event.callsign}»")
+                }
+                sarPaletteLatLng = null
+            },
+            onDismiss = { sarPaletteLatLng = null },
+        )
+
         if (drawingKind != null) {
             DrawingOverlay(
                 kind = drawingKind!!,
@@ -2215,14 +2269,28 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         DrawingKind.CIRCLE -> 2
                     }
                     if (drawingPoints.size >= minPts) {
-                        app.drawingStore.add(
-                            Drawing(
-                                id = "draw-${System.currentTimeMillis()}",
-                                kind = drawingKind!!,
-                                points = drawingPoints.map { it.latitude to it.longitude },
-                            )
+                        val id = "draw-${System.currentTimeMillis()}"
+                        val kind = drawingKind!!
+                        val pts = drawingPoints.map { it.latitude to it.longitude }
+                        val drawing = Drawing(
+                            id = id,
+                            kind = kind,
+                            points = pts,
                         )
-                        toast("Saved ${drawingKind!!.name.lowercase()}")
+                        app.drawingStore.add(drawing)
+                        if (kind == DrawingKind.POLYGON && pts.size >= 3) {
+                            scope.launch {
+                                val xml = soy.engindearing.omnitak.mobile.domain.CotBuilders
+                                    .buildPolygonDrawingEvent(
+                                        uid = id,
+                                        name = "Sector",
+                                        points = pts,
+                                        remarks = "psr:sector",
+                                    )
+                                runCatching { app.serverManager.sendCoT(xml) }
+                            }
+                        }
+                        toast("Saved ${kind.name.lowercase()}")
                     } else {
                         toast("Need at least $minPts points")
                     }
@@ -2303,11 +2371,13 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 callsignCardVisible = callsignCardVisible,
                 meshNodesVisible = meshNodesVisible,
                 map3dEnabled = map3dEnabled,
+                sarPointsOnly = sarPointsOnly,
                 onToggleGrid = { v -> mutatePref { it.copy(gridEnabled = v) } },
                 onToggleDrawings = { v -> mutatePref { it.copy(drawingsVisible = v) } },
                 onToggleAircraft = { v -> mutatePref { it.copy(aircraftVisible = v) } },
                 onToggleContacts = { v -> mutatePref { it.copy(contactsVisible = v) } },
                 onToggleCallsignCard = { v -> mutatePref { it.copy(callsignCardVisible = v) } },
+                onToggleSarPointsOnly = { v -> sarPointsOnly = v },
                 onToggleMeshNodes = { v ->
                     scope.launch { app.userPrefsStore.setMeshNodesLayerVisible(v) }
                 },
