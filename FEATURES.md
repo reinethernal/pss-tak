@@ -403,6 +403,8 @@ SMS-роль «семья/свидетель» — только после B4.
 
 API: `POST /api/psr/invite` (admin), публичная страница `GET /api/psr/invite?t=…` + [psr-invite.html](https://fts.plasmadancer.ru/downloads/psr-invite.html).
 
+В ссылке короткий код (64 hex), не JWT — иначе мессенджеры обрезают URL. Старые длинные ссылки с JWT тоже ещё открываются.
+
 ---
 
 ## С чего начать

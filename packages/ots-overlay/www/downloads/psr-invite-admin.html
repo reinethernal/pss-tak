@@ -15,32 +15,39 @@
 </head>
 <body>
   <h1>Персональная ссылка для волонтёра</h1>
-  <p class="muted">Войдите в кабинет OTS в этой же вкладке (cookies), укажите логин пользователя и скопируйте ссылку.</p>
+  <p class="muted">Сначала войдите в кабинет OTS в этой же вкладке (или откройте эту страницу из меню). Укажите логин пользователя и скопируйте короткую ссылку.</p>
   <label>Логин пользователя OTS</label>
   <input id="user" placeholder="например ivanov" />
-  <label>Подсказка пароля (опционально, только в ответе админу)</label>
+  <label>Подсказка пароля (опционально, только вам)</label>
   <input id="hint" placeholder="не попадёт в URL invite" />
   <button type="button" id="go">Создать ссылку</button>
   <div class="out" id="out">—</div>
   <script>
+    function xsrf() {
+      const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }
     document.getElementById('go').onclick = async () => {
       const username = document.getElementById('user').value.trim();
       const password_hint = document.getElementById('hint').value.trim() || null;
       const out = document.getElementById('out');
       if (!username) { out.textContent = 'Укажите логин'; return; }
       out.textContent = '…';
+      const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+      const tok = xsrf();
+      if (tok) headers['X-CSRFToken'] = tok, headers['X-XSRF-TOKEN'] = tok;
       const res = await fetch('/api/psr/invite', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', credentials: 'same-origin',
+        headers,
         body: JSON.stringify({ username, password_hint, max: 20 })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
-        out.textContent = data.error || ('Ошибка ' + res.status + ' — войдите как administrator');
+        out.textContent = data.error || (data.response && data.response.errors && data.response.errors.join('; ')) || ('Ошибка ' + res.status + ' — войдите как administrator');
         return;
       }
       out.innerHTML =
-        '<div><strong>Ссылка:</strong><br><a href="' + data.invite_url + '" style="color:#8cf">' + data.invite_url + '</a></div>' +
+        '<div><strong>Ссылка (короткая):</strong><br><a href="' + data.invite_url + '" style="color:#8cf">' + data.invite_url + '</a></div>' +
         '<button type="button" id="copy" style="margin-top:8px">Скопировать</button>' +
         (data.password_hint ? '<p class="muted">Подсказка пароля (только вам): ' + data.password_hint + '</p>' : '');
       document.getElementById('copy').onclick = () => navigator.clipboard.writeText(data.invite_url);
