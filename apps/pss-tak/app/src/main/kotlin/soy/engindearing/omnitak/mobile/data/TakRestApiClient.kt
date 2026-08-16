@@ -151,6 +151,22 @@ class TakRestApiClient(
     }
 
     /**
+     * `GET /Marti/sync/content?hash=…` — download a previously uploaded
+     * Mission Package / data package as raw bytes.
+     */
+    fun downloadDataPackage(hash: String): ByteArray {
+        val (code, bytes) = httpRequestBytes(
+            method = "GET",
+            path = "/Marti/sync/content",
+            query = listOf("hash" to hash),
+        )
+        if (code !in 200..299) {
+            throw ApiException(httpReason(code, bytes.decodeToString().take(120)))
+        }
+        return bytes
+    }
+
+    /**
      * `PUT /Marti/api/missions/{name}/contents` — attach a previously
      * uploaded data-package hash to the named mission. Mission must
      * already exist; pair with [createMission] + [uploadDataPackage].
@@ -266,6 +282,41 @@ class TakRestApiClient(
             code to text
         } catch (t: Throwable) {
             Log.w(TAG, "$method $path failed: ${t.javaClass.simpleName}: ${t.message}")
+            throw ApiException(t.message ?: t.javaClass.simpleName, t)
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** Like [httpRequest] but returns raw response bytes (for zip downloads). */
+    internal fun httpRequestBytes(
+        method: String,
+        path: String,
+        query: List<Pair<String, String>>,
+    ): Pair<Int, ByteArray> {
+        val url = URL(baseUrl(path) + encodeQuery(query))
+        val conn = (url.openConnection() as HttpsURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = WRITE_READ_TIMEOUT_MS
+            requestMethod = method
+            doInput = true
+            setRequestProperty("Accept", "*/*")
+            val user = server.username
+            val pass = server.password
+            if (!user.isNullOrBlank() && !pass.isNullOrBlank()) {
+                val raw = "$user:$pass".toByteArray(Charsets.UTF_8)
+                setRequestProperty("Authorization", "Basic " + Base64.encodeToString(raw, Base64.NO_WRAP))
+            }
+            TakTls.configure(this, server, certVault)
+        }
+        return try {
+            conn.connect()
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val bytes = stream?.readBytes() ?: ByteArray(0)
+            code to bytes
+        } catch (t: Throwable) {
+            Log.w(TAG, "$method $path (bytes) failed: ${t.javaClass.simpleName}: ${t.message}")
             throw ApiException(t.message ?: t.javaClass.simpleName, t)
         } finally {
             conn.disconnect()

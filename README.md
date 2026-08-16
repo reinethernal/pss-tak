@@ -29,7 +29,8 @@
 | [`fdroid/`](fdroid/) | Свой F-Droid | Раздача APK через GitHub Pages |
 
 Откуда взяты оригиналы и **какие правки сделаны** — в [SOURCES.md](SOURCES.md).  
-Для пользователей (что умеет сервис и когда пригодится) — [FEATURES.md](FEATURES.md).
+Для пользователей (что умеет сервис и когда пригодится) — [FEATURES.md](FEATURES.md).  
+Планы расширения ПСР/SAR — [ROADMAP.md](ROADMAP.md).
 
 ## Свой F-Droid
 

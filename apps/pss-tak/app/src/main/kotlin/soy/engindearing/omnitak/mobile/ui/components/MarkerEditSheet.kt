@@ -193,6 +193,38 @@ fun MarkerEditSheet(
             // for comms debugging. Both only render for an existing contact.
             ContactMetaRows(contact)
 
+            // Photo geo-marker preview (local cache path from PhotoMarkerManager).
+            val photoPath = contact?.localPhotoPath
+            if (!photoPath.isNullOrBlank()) {
+                val photoBmp = remember(photoPath) {
+                    runCatching {
+                        android.graphics.BitmapFactory.decodeFile(photoPath)?.asImageBitmap()
+                    }.getOrNull()
+                }
+                if (photoBmp != null) {
+                    Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.Image(
+                        bitmap = photoBmp,
+                        contentDescription = "Photo marker",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    )
+                }
+            } else if (
+                contact?.type == "b-i-x-i" ||
+                !contact?.fileshareSha256.isNullOrBlank()
+            ) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Photo downloading…",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = callsign,

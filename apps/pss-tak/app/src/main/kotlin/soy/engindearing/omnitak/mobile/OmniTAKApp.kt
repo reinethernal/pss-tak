@@ -640,7 +640,20 @@ class OmniTAKApp : Application() {
             // #179 — offer server-origin CoT to the mesh↔server relay so the
             // gateway can push the server picture down to the LoRa mesh. The
             // event is already tagged TAK_SERVER by the inbound path above.
-            inboundRelay = { event -> relayInbound(event) },
+            inboundRelay = { event ->
+                relayInbound(event)
+                // Photo markers (`b-i-x-i` / fileshare): pull Mission Package
+                // into local cache so the map sheet can show a preview.
+                // Lambda runs after ServerManager is live; photoMarkerManager
+                // is lazy-safe here.
+                if (event.type == soy.engindearing.omnitak.mobile.domain.PhotoMarkerPackage.IMAGE_TYPE ||
+                    !event.fileshareSha256.isNullOrBlank()
+                ) {
+                    appScope.launch {
+                        runCatching { photoMarkerManager.ensureCached(event) }
+                    }
+                }
+            },
         )
     }
 
@@ -681,6 +694,19 @@ class OmniTAKApp : Application() {
         soy.engindearing.omnitak.mobile.domain.MissionSyncManager(
             serverManager = serverManager,
             certVault = certVault,
+        )
+    }
+
+    /** Photo geo-markers (ATAK Quick Pic compatible `b-i-x-i` + fileshare). */
+    val photoMarkerManager: soy.engindearing.omnitak.mobile.domain.PhotoMarkerManager by lazy {
+        soy.engindearing.omnitak.mobile.domain.PhotoMarkerManager(
+            context = this,
+            serverManager = serverManager,
+            missionSyncManager = missionSyncManager,
+            certVault = certVault,
+            contactStore = contactStore,
+            selfCallsign = { cachedPrefs.value.callsign },
+            selfUid = { cachedPrefs.value.selfUid },
         )
     }
 

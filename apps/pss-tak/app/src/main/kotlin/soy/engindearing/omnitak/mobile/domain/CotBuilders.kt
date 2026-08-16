@@ -79,6 +79,20 @@ object CotBuilders {
             event.courseHeading?.let {
                 append("<track course=\"").append(it).append("\" speed=\"0.0\"/>")
             }
+            // Photo marker announce (ATAK Quick Pic / Mission Package)
+            val sha = event.fileshareSha256
+            val url = event.fileshareUrl
+            if (!sha.isNullOrBlank() && !url.isNullOrBlank()) {
+                append("<fileshare")
+                append(" filename=\"").append(CotXml.escape(event.fileshareFilename ?: "photo.jpg")).append('"')
+                append(" name=\"").append(CotXml.escape(event.callsign ?: "Photo")).append('"')
+                append(" senderCallsign=\"").append(CotXml.escape(event.callsign ?: "PSS")).append('"')
+                append(" senderUid=\"").append(CotXml.escape(event.uid)).append('"')
+                append(" senderUrl=\"").append(CotXml.escape(url)).append('"')
+                append(" sha256=\"").append(CotXml.escape(sha)).append('"')
+                append(" sizeInBytes=\"0\"")
+                append("/>")
+            }
             destUids.forEach { append("<dest uid=\"").append(CotXml.escape(it)).append("\"/>") }
             append("</detail>")
         }
@@ -164,6 +178,56 @@ object CotBuilders {
 
     /** Fresh random TAK-style UID. */
     fun newUid(): String = UUID.randomUUID().toString()
+
+    /**
+     * Photo geo-marker (`b-i-x-i`) with optional `<fileshare>` after Marti upload.
+     * Mirrors ATAK Quick Pic wire shape so peers and OTS can resolve the image.
+     */
+    fun buildPhotoMarkerEvent(
+        uid: String,
+        callsign: String,
+        lat: Double,
+        lon: Double,
+        remarks: String = "",
+        fileshareSha256: String? = null,
+        fileshareUrl: String? = null,
+        fileshareFilename: String = "photo.jpg",
+        sizeInBytes: Long = 0L,
+        senderUid: String = uid,
+        senderCallsign: String = callsign,
+        staleSeconds: Long = 3600 * 24 * 7,
+    ): String {
+        val now = nowIso()
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(callsign)).append("\"/>")
+            if (remarks.isNotBlank()) {
+                append("<remarks>").append(CotXml.escape(remarks)).append("</remarks>")
+            }
+            if (!fileshareSha256.isNullOrBlank() && !fileshareUrl.isNullOrBlank()) {
+                append("<fileshare")
+                append(" filename=\"").append(CotXml.escape(fileshareFilename)).append('"')
+                append(" name=\"").append(CotXml.escape(callsign)).append('"')
+                append(" senderCallsign=\"").append(CotXml.escape(senderCallsign)).append('"')
+                append(" senderUid=\"").append(CotXml.escape(senderUid)).append('"')
+                append(" senderUrl=\"").append(CotXml.escape(fileshareUrl)).append('"')
+                append(" sha256=\"").append(CotXml.escape(fileshareSha256)).append('"')
+                append(" sizeInBytes=\"").append(sizeInBytes).append('"')
+                append("/>")
+            }
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = PhotoMarkerPackage.IMAGE_TYPE,
+            how = "h-g-i-g-o",
+            lat = lat,
+            lon = lon,
+            timeIso = now,
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
 
     /** XML escape — delegates to the shared [CotXml.escape]. Kept as a
      *  public alias because non-CoT XML emitters (KML/data-package

@@ -24,8 +24,11 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Straighten
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -37,12 +40,18 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import android.net.Uri
+import java.io.File
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalAccent
 import soy.engindearing.omnitak.mobile.ui.theme.TacticalBackground
 import androidx.compose.runtime.Composable
@@ -71,6 +80,8 @@ import soy.engindearing.omnitak.mobile.data.Drawing
 import soy.engindearing.omnitak.mobile.data.DrawingKind
 import soy.engindearing.omnitak.mobile.data.GeoMath
 import soy.engindearing.omnitak.mobile.domain.ConnectionState
+import soy.engindearing.omnitak.mobile.domain.PhotoMarkerManager
+import soy.engindearing.omnitak.mobile.domain.PhotoMarkerPackage
 import soy.engindearing.omnitak.mobile.i18n.Loc
 import soy.engindearing.omnitak.mobile.ui.components.ATAKStatusBar
 import soy.engindearing.omnitak.mobile.ui.components.CompassOverlay
@@ -185,6 +196,10 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     // doesn't have to know about FEMA-specific fields.
     var femaPaletteLatLng by remember { mutableStateOf<LatLng?>(null) }
     var editingMarker by remember { mutableStateOf<CoTEvent?>(null) }
+    // Photo geo-marker (ATAK Quick Pic compatible): long-press → Photo → camera/gallery.
+    var photoPendingLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var photoSourcePickerOpen by remember { mutableStateOf(false) }
+    var pendingCameraCapture by remember { mutableStateOf<Pair<File, Uri>?>(null) }
     var selfMarkerEditOpen by remember { mutableStateOf(false) }
     // #82 — manual self-position override. Stored on LocationProvider (not
     // local state) so it's the single source of truth: the puck + the
@@ -296,6 +311,8 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
     var lassoActionsOpen by remember { mutableStateOf(false) }
     var contactPickerOpen by remember { mutableStateOf(false) }
     val appContext = LocalContext.current.applicationContext
+    val activityContext = LocalContext.current
+
     // Observe activation requests via a generation counter — every
     // increment means "user picked Lasso Select again." We track the
     // last value we honored so we only flip lassoMode on a fresh
@@ -314,6 +331,89 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
 
     fun toast(msg: String) {
         scope.launch { snackbar.showSnackbar(msg, withDismissAction = true) }
+    }
+
+    fun publishPhotoAt(ll: LatLng, fromUri: Uri?, fromFile: File?) {
+        scope.launch {
+            toast("Uploading photo marker…")
+            val result = when {
+                fromFile != null -> app.photoMarkerManager.publishFromFile(
+                    fromFile, ll.latitude, ll.longitude,
+                )
+                fromUri != null -> app.photoMarkerManager.publishFromUri(
+                    fromUri, ll.latitude, ll.longitude,
+                )
+                else -> PhotoMarkerManager.PublishResult.Failed("No image")
+            }
+            when (result) {
+                is PhotoMarkerManager.PublishResult.Ok ->
+                    toast("Photo marker sent (${result.hash.take(8)}…)")
+                is PhotoMarkerManager.PublishResult.Failed ->
+                    toast("Photo failed: ${result.reason}")
+            }
+        }
+    }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { ok ->
+        val pending = pendingCameraCapture
+        val ll = photoPendingLatLng
+        pendingCameraCapture = null
+        photoPendingLatLng = null
+        if (ok && pending != null && ll != null) {
+            publishPhotoAt(ll, fromUri = null, fromFile = pending.first)
+        }
+    }
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        val ll = photoPendingLatLng
+        photoPendingLatLng = null
+        if (uri != null && ll != null) {
+            publishPhotoAt(ll, fromUri = uri, fromFile = null)
+        }
+    }
+
+    val cameraPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val ll = photoPendingLatLng
+        if (!granted || ll == null) {
+            if (!granted) toast("Camera permission needed")
+            photoPendingLatLng = null
+            return@rememberLauncherForActivityResult
+        }
+        val dir = File(appContext.cacheDir, "photo_capture").also { it.mkdirs() }
+        val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(
+            activityContext,
+            "${appContext.packageName}.fileprovider",
+            file,
+        )
+        pendingCameraCapture = file to uri
+        takePictureLauncher.launch(uri)
+    }
+
+    fun startCameraCapture() {
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+            activityContext,
+            android.Manifest.permission.CAMERA,
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            val dir = File(appContext.cacheDir, "photo_capture").also { it.mkdirs() }
+            val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                activityContext,
+                "${appContext.packageName}.fileprovider",
+                file,
+            )
+            pendingCameraCapture = file to uri
+            takePictureLauncher.launch(uri)
+        } else {
+            cameraPermLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     // The Cesium globe renders only contacts + self — measurement,
@@ -483,6 +583,18 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
         if (!measurementActive && !rangeRingsActive) {
             editingMarker = event
             markerSheetLatLng = LatLng(event.lat, event.lon)
+            if (event.type == PhotoMarkerPackage.IMAGE_TYPE ||
+                !event.fileshareSha256.isNullOrBlank()
+            ) {
+                scope.launch {
+                    val updated = runCatching {
+                        app.photoMarkerManager.ensureCached(event)
+                    }.getOrNull()
+                    if (updated != null && editingMarker?.uid == event.uid) {
+                        editingMarker = updated
+                    }
+                }
+            }
         }
     }
     // Compose-observable camera target — MapCameraStore's plain fields
@@ -1652,6 +1764,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
             anchor = radialAnchor ?: Offset.Zero,
             actions = buildList {
                 add(RadialAction("drop", Icons.Filled.Place, "Drop Marker"))
+                add(RadialAction("photo", Icons.Filled.PhotoCamera, "Photo Marker"))
                 add(RadialAction("measure", Icons.Filled.Straighten, "Measure"))
                 // "Navigate" removed — Android has no route-planning /
                 // turn-by-turn engine yet (iOS executeNavigate rides
@@ -1687,6 +1800,10 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 radialLatLng = null
                 when (action.id) {
                     "drop" -> if (ll != null) markerSheetLatLng = ll
+                    "photo" -> if (ll != null) {
+                        photoPendingLatLng = ll
+                        photoSourcePickerOpen = true
+                    }
                     // "Add" = quick-add at the long-press point — same
                     // marker-creation sheet as Drop (GAP-052 parity with
                     // iOS RadialMenuActionExecutor).
@@ -1812,6 +1929,31 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 radialLatLng = null
             },
         )
+
+        if (photoSourcePickerOpen) {
+            AlertDialog(
+                onDismissRequest = {
+                    photoSourcePickerOpen = false
+                    photoPendingLatLng = null
+                },
+                title = { Text("Photo marker") },
+                text = { Text("Attach a photo at this map location (ATAK-compatible).") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        photoSourcePickerOpen = false
+                        startCameraCapture()
+                    }) { Text("Camera") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        photoSourcePickerOpen = false
+                        if (photoPendingLatLng != null) {
+                            pickImageLauncher.launch("image/*")
+                        }
+                    }) { Text("Gallery") }
+                },
+            )
+        }
 
         MarkerEditSheet(
             visible = markerSheetLatLng != null,

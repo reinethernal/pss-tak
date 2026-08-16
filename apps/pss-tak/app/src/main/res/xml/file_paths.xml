@@ -16,4 +16,7 @@
     <cache-path
         name="cache_exports"
         path="exports/" />
+    <cache-path
+        name="photo_capture"
+        path="photo_capture/" />
 </paths>

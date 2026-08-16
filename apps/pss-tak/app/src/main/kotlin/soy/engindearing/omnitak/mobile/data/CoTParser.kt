@@ -40,6 +40,9 @@ object CoTParser {
         var iconsetPath: String? = null
         var colorArgb: Int? = null
         var courseHeading: Double? = null
+        var fileshareSha256: String? = null
+        var fileshareUrl: String? = null
+        var fileshareFilename: String? = null
 
         var ev = parser.eventType
         while (ev != XmlPullParser.END_DOCUMENT) {
@@ -61,30 +64,29 @@ object CoTParser {
                     "contact" -> {
                         callsign = parser.getAttributeValue(null, "callsign") ?: callsign
                     }
-                    // TAK team assignment — <__group name="Red" role="Team Member"/>
-                    // present under <detail> on PPLI events. When present it overrides
-                    // the MIL-STD affiliation color so the contact matches Civtak/iTAK.
                     "__group" -> {
                         teamName = parser.getAttributeValue(null, "name") ?: teamName
                         teamRole = parser.getAttributeValue(null, "role") ?: teamRole
                     }
-                    // Free-text remarks — chat fallback + marker notes read these.
                     "remarks" -> {
                         remarks = parser.nextText() ?: remarks
                     }
-                    // Custom-glyph icon (FEMA etc.) — rebuildEvent re-emits it.
                     "usericon" -> {
                         iconsetPath = parser.getAttributeValue(null, "iconsetpath") ?: iconsetPath
                     }
-                    // Marker colour — Spot Map points carry their swatch here
-                    // (<color argb="-65536"/>); the TAK icon registry tints the
-                    // dot from it so received spots match the sender's colour.
                     "color" -> {
                         colorArgb = parser.getAttributeValue(null, "argb")?.toIntOrNull() ?: colorArgb
                     }
-                    // Course heading from <track course="270.0" speed="0.0"/>
                     "track" -> {
                         courseHeading = parser.getAttributeValue(null, "course")?.toDoubleOrNull() ?: courseHeading
+                    }
+                    // ATAK Quick Pic / Mission Package announce
+                    "fileshare" -> {
+                        fileshareSha256 = parser.getAttributeValue(null, "sha256") ?: fileshareSha256
+                        fileshareUrl = parser.getAttributeValue(null, "senderUrl")
+                            ?: parser.getAttributeValue(null, "senderurl")
+                            ?: fileshareUrl
+                        fileshareFilename = parser.getAttributeValue(null, "filename") ?: fileshareFilename
                     }
                 }
             }
@@ -110,6 +112,9 @@ object CoTParser {
             iconsetPath = iconsetPath,
             colorArgb = colorArgb,
             courseHeading = courseHeading,
+            fileshareSha256 = fileshareSha256,
+            fileshareUrl = fileshareUrl,
+            fileshareFilename = fileshareFilename,
         )
     }.getOrNull()
 }

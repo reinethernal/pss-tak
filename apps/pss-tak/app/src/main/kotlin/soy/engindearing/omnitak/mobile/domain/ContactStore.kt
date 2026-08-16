@@ -85,6 +85,8 @@ class ContactStore {
         fun isEndpoint(event: CoTEvent): Boolean {
             if (event.uid.startsWith("local-")) return false
             if (event.type.startsWith("b-m-p")) return false
+            // Photo markers (ATAK Quick Pic) are map annotations, not chat peers.
+            if (event.type == "b-i-x-i" || event.type.startsWith("b-i-")) return false
             return true
         }
     }

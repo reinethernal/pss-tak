@@ -104,6 +104,15 @@ data class CoTEvent(
      * locally-built event before the source is attached).
      */
     val source: CoTSource? = null,
+    /**
+     * Photo-marker (ATAK Quick Pic / `b-i-x-i`) fileshare metadata.
+     * Present when the event carries `<fileshare sha256="…" senderUrl="…"/>`.
+     */
+    val fileshareSha256: String? = null,
+    val fileshareUrl: String? = null,
+    val fileshareFilename: String? = null,
+    /** Local absolute path after we downloaded/cached the photo (send or recv). */
+    val localPhotoPath: String? = null,
 ) {
     val affiliation: CoTAffiliation
         get() {
