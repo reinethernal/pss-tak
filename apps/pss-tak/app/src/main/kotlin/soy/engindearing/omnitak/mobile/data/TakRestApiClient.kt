@@ -202,6 +202,14 @@ class TakRestApiClient(
         return parseMissionRoster(body)
     }
 
+    /** OTS ПСР: ориентировка пропавшего (`GET /api/missions/{name}/subject`). */
+    fun getMissionSubject(missionName: String): TakMissionSubject? {
+        val (code, body) = httpGet("/api/missions/${urlSegment(missionName)}/subject")
+        if (code == 404) return null
+        if (code !in 200..299) throw ApiException(httpReason(code, body))
+        return parseMissionSubject(body)
+    }
+
     // ------------------------------------------------------------------
     // JSON parsing — tolerant of the three envelope shapes.
     // ------------------------------------------------------------------
@@ -271,6 +279,37 @@ class TakRestApiClient(
                 status = o.str("status") ?: "expected",
             )
         }
+    }
+
+    internal fun parseMissionSubject(body: String): TakMissionSubject? {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return null
+        val active = root["active"] as? JsonObject
+        val fromActive = active?.let { subjectFromJson(it) }
+        if (fromActive != null) return fromActive
+        val arr = listEnvelope(body) ?: return null
+        val first = arr.firstOrNull() as? JsonObject ?: return null
+        return subjectFromJson(first)
+    }
+
+    private fun subjectFromJson(o: JsonObject): TakMissionSubject? {
+        val uid = o.str("uid") ?: return null
+        val fullName = o.str("full_name") ?: return null
+        return TakMissionSubject(
+            uid = uid,
+            fullName = fullName,
+            aliases = o.str("aliases"),
+            age = o.str("age"),
+            sex = o.str("sex"),
+            clothing = o.str("clothing"),
+            appearance = o.str("appearance"),
+            distinguishing = o.str("distinguishing"),
+            medical = o.str("medical"),
+            lastSeenAt = o.str("last_seen_at"),
+            lastSeenPlace = o.str("last_seen_place"),
+            notes = o.str("notes"),
+            photoHash = o.str("photo_hash"),
+            status = o.str("status") ?: "active",
+        )
     }
 
     /**
@@ -574,4 +613,22 @@ data class TakMissionRosterEntry(
     val skills: String? = null,
     val roleOnOp: String? = null,
     val status: String = "expected",
+)
+
+/** Ориентировка пропавшего (OTS `/api/missions/.../subject`). */
+data class TakMissionSubject(
+    val uid: String,
+    val fullName: String,
+    val aliases: String? = null,
+    val age: String? = null,
+    val sex: String? = null,
+    val clothing: String? = null,
+    val appearance: String? = null,
+    val distinguishing: String? = null,
+    val medical: String? = null,
+    val lastSeenAt: String? = null,
+    val lastSeenPlace: String? = null,
+    val notes: String? = null,
+    val photoHash: String? = null,
+    val status: String = "active",
 )

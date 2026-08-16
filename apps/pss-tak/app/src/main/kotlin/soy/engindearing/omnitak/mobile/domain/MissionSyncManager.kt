@@ -13,6 +13,7 @@ import soy.engindearing.omnitak.mobile.data.TAKServer
 import soy.engindearing.omnitak.mobile.data.TakDataPackageInfo
 import soy.engindearing.omnitak.mobile.data.TakMissionInfo
 import soy.engindearing.omnitak.mobile.data.TakMissionRosterEntry
+import soy.engindearing.omnitak.mobile.data.TakMissionSubject
 import soy.engindearing.omnitak.mobile.data.TakMissionTask
 import soy.engindearing.omnitak.mobile.data.TakRestApiClient
 
@@ -182,6 +183,7 @@ class MissionSyncManager(
             runCatching {
                 val client = TakRestApiClient(sv, certVault)
                 MissionOpsSnapshot(
+                    subject = runCatching { client.getMissionSubject(missionName) }.getOrNull(),
                     tasks = runCatching { client.getMissionTasks(missionName) }.getOrDefault(emptyList()),
                     roster = runCatching { client.getMissionRoster(missionName) }.getOrDefault(emptyList()),
                 )
@@ -268,6 +270,7 @@ data class AggregatedPackage(
 }
 
 data class MissionOpsSnapshot(
+    val subject: TakMissionSubject? = null,
     val tasks: List<TakMissionTask> = emptyList(),
     val roster: List<TakMissionRosterEntry> = emptyList(),
 )

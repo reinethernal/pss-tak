@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ПСР — операция: ориентировка, задания, состав</title>
+  <style>
+    :root { --bg:#1a1a1a; --card:#252525; --line:#444; --acc:#2a6; --txt:#eee; --mut:#aaa; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--txt); }
+    header { padding:14px 18px; background:#222; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    header h1 { margin:0; font-size:1.2rem; }
+    a { color:#8cf; }
+    .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    select, input, textarea, button { padding:8px 10px; border-radius:6px; border:1px solid var(--line); background:#333; color:var(--txt); }
+    button.primary { background:var(--acc); border-color:var(--acc); font-weight:600; cursor:pointer; }
+    button.danger { background:#a33; border-color:#a33; cursor:pointer; }
+    .tabs { display:flex; gap:8px; margin-bottom:14px; }
+    .tabs button { cursor:pointer; }
+    .tabs button.active { background:var(--acc); border-color:var(--acc); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px; }
+    .muted { color:var(--mut); font-size:13px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    .hidden { display:none; }
+    #status { min-height:1.2em; }
+    #s-preview { max-width:280px; max-height:320px; border-radius:8px; border:1px solid var(--line); display:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Операция ПСР</h1>
+    <a href="/map">← Карта</a>
+    <a href="/missions">Операции OTS</a>
+    <div class="row" style="margin:0">
+      <label>Операция
+        <select id="mission"></select>
+      </label>
+      <button type="button" id="reload">Обновить</button>
+    </div>
+  </header>
+  <div class="wrap">
+    <div id="status" class="muted"></div>
+    <div class="tabs">
+      <button type="button" class="active" data-tab="subject">Ориентировка</button>
+      <button type="button" data-tab="tasks">Задания</button>
+      <button type="button" data-tab="roster">Состав</button>
+    </div>
+
+    <section id="tab-subject">
+      <div class="card">
+        <h3 style="margin-top:0">Ориентировка пропавшего</h3>
+        <p class="muted">Карточка для всех групп. Точка LKP на карте ставится отдельно.</p>
+        <div class="row">
+          <input id="s-name" placeholder="ФИО *" style="flex:1;min-width:180px" />
+          <input id="s-aliases" placeholder="Как ещё зовут" style="flex:1" />
+          <input id="s-age" placeholder="Возраст" style="width:100px" />
+          <select id="s-sex">
+            <option value="">пол</option>
+            <option value="m">муж</option>
+            <option value="f">жен</option>
+            <option value="unknown">неизв.</option>
+          </select>
+        </div>
+        <div class="row">
+          <textarea id="s-clothing" placeholder="Одежда" rows="2" style="flex:1;min-width:200px"></textarea>
+          <textarea id="s-appearance" placeholder="Внешность (лицо, рост, телосложение)" rows="2" style="flex:1;min-width:200px"></textarea>
+        </div>
+        <div class="row">
+          <textarea id="s-distinguishing" placeholder="Особые приметы" rows="2" style="flex:1"></textarea>
+          <textarea id="s-medical" placeholder="Медицина / особенности" rows="2" style="flex:1"></textarea>
+        </div>
+        <div class="row">
+          <input id="s-place" placeholder="Где видели / последнее место" style="flex:1" />
+          <input id="s-seen" type="datetime-local" title="Когда видели" />
+          <select id="s-status">
+            <option value="active">активна</option>
+            <option value="found">найден</option>
+            <option value="cancelled">снята</option>
+          </select>
+        </div>
+        <div class="row">
+          <textarea id="s-notes" placeholder="Заметки штаба" rows="2" style="flex:1"></textarea>
+        </div>
+        <div class="row">
+          <button class="primary" type="button" id="s-save">Сохранить ориентировку</button>
+          <label class="muted">Фото <input type="file" id="s-photo" accept="image/*" /></label>
+          <button type="button" id="s-upload" disabled>Загрузить фото</button>
+        </div>
+        <img id="s-preview" alt="Фото ориентировки" />
+        <div id="s-meta" class="muted" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <section id="tab-tasks" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">Новое задание</h3>
+        <div class="row">
+          <input id="t-title" placeholder="Заголовок" style="flex:1;min-width:180px" />
+          <input id="t-assignee" placeholder="Кому (группа / позывной)" style="flex:1;min-width:160px" />
+          <input id="t-return" type="datetime-local" title="Срок возврата" />
+        </div>
+        <div class="row">
+          <select id="t-sector" style="flex:1"><option value="">— сектор —</option></select>
+          <textarea id="t-body" placeholder="Текст задания" rows="2" style="flex:2;min-width:220px"></textarea>
+          <button class="primary" type="button" id="t-create">Создать</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Фильтр
+          <select id="t-filter">
+            <option value="">все</option>
+            <option value="issued">выдано</option>
+            <option value="acked">принято</option>
+            <option value="done">выполнено</option>
+            <option value="overdue">просрочено</option>
+          </select>
+        </label>
+      </div>
+      <div id="tasks-list"></div>
+    </section>
+
+    <section id="tab-roster" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">Добавить в состав</h3>
+        <div class="row">
+          <input id="r-name" placeholder="ФИО / имя" style="flex:1" />
+          <input id="r-callsign" placeholder="Позывной" />
+          <input id="r-phone" placeholder="Телефон" />
+          <input id="r-transport" placeholder="Транспорт" />
+        </div>
+        <div class="row">
+          <input id="r-skills" placeholder="Навыки (через запятую)" style="flex:1" />
+          <input id="r-role" placeholder="Роль на выезде" />
+          <select id="r-status">
+            <option value="expected">ожидается</option>
+            <option value="arrived">прибыл</option>
+            <option value="deployed">в поле</option>
+            <option value="returned">вернулся</option>
+          </select>
+          <button class="primary" type="button" id="r-create">Добавить</button>
+          <button type="button" id="r-seed">Подтянуть онлайн</button>
+        </div>
+      </div>
+      <div id="roster-list"></div>
+    </section>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    function setStatus(t) { statusEl.textContent = t || ''; }
+    function api(path, opts) {
+      return fetch(path, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(opts && opts.headers) },
+        ...opts
+      });
+    }
+    function missionName() {
+      return document.getElementById('mission').value;
+    }
+    const STATUS_RU = {
+      issued: 'выдано', acked: 'принято', done: 'выполнено', overdue: 'просрочено',
+      expected: 'ожидается', arrived: 'прибыл', deployed: 'в поле', returned: 'вернулся',
+      active: 'активна', cleared: 'пройден', found: 'найден', cancelled: 'снята'
+    };
+
+    let currentSubjectUid = null;
+
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ['subject', 'tasks', 'roster'].forEach(t => {
+          document.getElementById('tab-' + t).classList.toggle('hidden', btn.dataset.tab !== t);
+        });
+      };
+    });
+
+    function fillSubjectForm(s) {
+      currentSubjectUid = s ? s.uid : null;
+      document.getElementById('s-name').value = (s && s.full_name) || '';
+      document.getElementById('s-aliases').value = (s && s.aliases) || '';
+      document.getElementById('s-age').value = (s && s.age) || '';
+      document.getElementById('s-sex').value = (s && s.sex) || '';
+      document.getElementById('s-clothing').value = (s && s.clothing) || '';
+      document.getElementById('s-appearance').value = (s && s.appearance) || '';
+      document.getElementById('s-distinguishing').value = (s && s.distinguishing) || '';
+      document.getElementById('s-medical').value = (s && s.medical) || '';
+      document.getElementById('s-place').value = (s && s.last_seen_place) || '';
+      document.getElementById('s-notes').value = (s && s.notes) || '';
+      document.getElementById('s-status').value = (s && s.status) || 'active';
+      document.getElementById('s-upload').disabled = !currentSubjectUid;
+      const prev = document.getElementById('s-preview');
+      const meta = document.getElementById('s-meta');
+      if (s && s.photo_hash && s.uid) {
+        const m = missionName();
+        prev.src = '/api/missions/' + encodeURIComponent(m) + '/subject/' + encodeURIComponent(s.uid) + '/photo';
+        prev.style.display = 'block';
+        meta.textContent = 'Фото: ' + (s.photo_filename || s.photo_hash.slice(0, 12)) + ' · статус: ' + (STATUS_RU[s.status] || s.status);
+      } else {
+        prev.removeAttribute('src');
+        prev.style.display = 'none';
+        meta.textContent = s ? ('Статус: ' + (STATUS_RU[s.status] || s.status) + ' · uid ' + s.uid) : 'Ориентировка ещё не создана';
+      }
+      if (s && s.last_seen_at) {
+        try {
+          const d = new Date(s.last_seen_at);
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          document.getElementById('s-seen').value = local;
+        } catch (e) { document.getElementById('s-seen').value = ''; }
+      } else {
+        document.getElementById('s-seen').value = '';
+      }
+    }
+
+    async function loadSubject() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/subject');
+      if (res.status === 401) { setStatus('Войдите в кабинет OTS'); return; }
+      const data = await res.json();
+      fillSubjectForm(data.active || (data.results && data.results[0]) || null);
+    }
+
+    function subjectBodyFromForm() {
+      return {
+        full_name: document.getElementById('s-name').value,
+        aliases: document.getElementById('s-aliases').value || null,
+        age: document.getElementById('s-age').value || null,
+        sex: document.getElementById('s-sex').value || null,
+        clothing: document.getElementById('s-clothing').value || null,
+        appearance: document.getElementById('s-appearance').value || null,
+        distinguishing: document.getElementById('s-distinguishing').value || null,
+        medical: document.getElementById('s-medical').value || null,
+        last_seen_place: document.getElementById('s-place').value || null,
+        last_seen_at: document.getElementById('s-seen').value
+          ? new Date(document.getElementById('s-seen').value).toISOString()
+          : null,
+        notes: document.getElementById('s-notes').value || null,
+        status: document.getElementById('s-status').value || 'active'
+      };
+    }
+
+    async function loadMissions() {
+      const res = await api('/api/missions');
+      if (res.status === 401) { setStatus('Войдите в кабинет OTS'); return; }
+      const data = await res.json();
+      let list = data.results || data.missions || data || [];
+      if (!Array.isArray(list)) list = [];
+      const sel = document.getElementById('mission');
+      const q = new URLSearchParams(location.search).get('mission');
+      sel.innerHTML = '';
+      list.forEach(m => {
+        const name = m.name || m;
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        if (q && q === name) o.selected = true;
+        sel.appendChild(o);
+      });
+      if (!list.length) setStatus('Нет операций — создайте в разделе Missions');
+    }
+
+    async function loadSectors() {
+      const res = await api('/api/search_sectors');
+      if (!res.ok) return;
+      const data = await res.json();
+      const sel = document.getElementById('t-sector');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">— сектор —</option>';
+      (data.results || []).forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.uid;
+        o.textContent = (s.name || 'Сектор') + (s.mission_name ? ' (' + s.mission_name + ')' : '');
+        sel.appendChild(o);
+      });
+      if (cur) sel.value = cur;
+    }
+
+    async function loadTasks() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/tasks');
+      const data = await res.json();
+      const filter = document.getElementById('t-filter').value;
+      let rows = data.results || [];
+      if (filter) rows = rows.filter(t => t.status === filter);
+      const box = document.getElementById('tasks-list');
+      box.innerHTML = '';
+      if (!rows.length) { box.innerHTML = '<div class="muted">Заданий нет</div>'; return; }
+      rows.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const mapLink = t.sector_uid
+          ? '<a href="/map" target="_blank">показать сектор на карте</a>'
+          : '';
+        card.innerHTML =
+          '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+          '<strong>' + (t.title || '') + '</strong>' +
+          '<span class="muted">' + (STATUS_RU[t.status] || t.status) + '</span></div>' +
+          '<div class="muted">' + [t.assignee ? '→ ' + t.assignee : '', t.return_by ? 'до ' + t.return_by : ''].filter(Boolean).join(' · ') + '</div>' +
+          '<div style="margin-top:6px;white-space:pre-wrap">' + (t.body || '') + '</div>' +
+          '<div class="row" style="margin-top:8px">' + mapLink + '</div>';
+        const actions = document.createElement('div');
+        actions.className = 'row';
+        ['acked','done','issued'].forEach(st => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = STATUS_RU[st];
+          b.onclick = async () => {
+            await api('/api/missions/' + encodeURIComponent(m) + '/tasks/' + encodeURIComponent(t.uid), {
+              method: 'PATCH', body: JSON.stringify({ status: st })
+            });
+            loadTasks();
+          };
+          actions.appendChild(b);
+        });
+        const del = document.createElement('button');
+        del.className = 'danger';
+        del.textContent = 'Удалить';
+        del.onclick = async () => {
+          if (!confirm('Удалить задание?')) return;
+          await api('/api/missions/' + encodeURIComponent(m) + '/tasks/' + encodeURIComponent(t.uid), { method: 'DELETE' });
+          loadTasks();
+        };
+        actions.appendChild(del);
+        card.appendChild(actions);
+        box.appendChild(card);
+      });
+    }
+
+    async function loadRoster() {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/roster');
+      const data = await res.json();
+      const box = document.getElementById('roster-list');
+      const rows = data.results || [];
+      if (!rows.length) { box.innerHTML = '<div class="muted">Состав пуст</div>'; return; }
+      let html = '<table><thead><tr><th>Имя</th><th>Позывной</th><th>Телефон</th><th>Транспорт</th><th>Навыки</th><th>Роль</th><th>Статус</th><th></th></tr></thead><tbody>';
+      rows.forEach(e => {
+        html += '<tr>' +
+          '<td>' + (e.display_name || '') + '</td>' +
+          '<td>' + (e.callsign || '') + '</td>' +
+          '<td>' + (e.phone || '') + '</td>' +
+          '<td>' + (e.transport || '') + '</td>' +
+          '<td>' + (e.skills || '') + '</td>' +
+          '<td>' + (e.role_on_op || '') + '</td>' +
+          '<td>' + (STATUS_RU[e.status] || e.status) + '</td>' +
+          '<td><button data-uid="' + e.uid + '" class="r-arr">Прибыл</button> ' +
+          '<button data-uid="' + e.uid + '" class="r-dep">В поле</button> ' +
+          '<button data-uid="' + e.uid + '" class="r-ret">Вернулся</button> ' +
+          '<button data-uid="' + e.uid + '" class="r-del danger">×</button></td></tr>';
+      });
+      html += '</tbody></table>';
+      box.innerHTML = html;
+      box.querySelectorAll('.r-arr').forEach(b => b.onclick = () => patchRoster(b.dataset.uid, { status: 'arrived' }));
+      box.querySelectorAll('.r-dep').forEach(b => b.onclick = () => patchRoster(b.dataset.uid, { status: 'deployed' }));
+      box.querySelectorAll('.r-ret').forEach(b => b.onclick = () => patchRoster(b.dataset.uid, { status: 'returned' }));
+      box.querySelectorAll('.r-del').forEach(b => b.onclick = async () => {
+        if (!confirm('Удалить из состава?')) return;
+        await api('/api/missions/' + encodeURIComponent(m) + '/roster/' + encodeURIComponent(b.dataset.uid), { method: 'DELETE' });
+        loadRoster();
+      });
+    }
+
+    async function patchRoster(uid, body) {
+      const m = missionName();
+      await api('/api/missions/' + encodeURIComponent(m) + '/roster/' + encodeURIComponent(uid), {
+        method: 'PATCH', body: JSON.stringify(body)
+      });
+      loadRoster();
+    }
+
+    document.getElementById('s-save').onclick = async () => {
+      const m = missionName();
+      if (!m) return setStatus('Выберите операцию');
+      const body = subjectBodyFromForm();
+      if (!body.full_name) return setStatus('Укажите ФИО');
+      let res;
+      if (currentSubjectUid) {
+        res = await api('/api/missions/' + encodeURIComponent(m) + '/subject/' + encodeURIComponent(currentSubjectUid), {
+          method: 'PATCH', body: JSON.stringify(body)
+        });
+      } else {
+        res = await api('/api/missions/' + encodeURIComponent(m) + '/subject', {
+          method: 'POST', body: JSON.stringify(body)
+        });
+      }
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('Ориентировка сохранена');
+      fillSubjectForm(data.subject);
+    };
+
+    document.getElementById('s-upload').onclick = async () => {
+      const m = missionName();
+      const file = document.getElementById('s-photo').files[0];
+      if (!m || !currentSubjectUid) return setStatus('Сначала сохраните ориентировку');
+      if (!file) return setStatus('Выберите файл');
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/missions/' + encodeURIComponent(m) + '/subject/' + encodeURIComponent(currentSubjectUid) + '/photo', {
+        method: 'POST', credentials: 'include', body: fd
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка загрузки');
+      setStatus('Фото загружено');
+      fillSubjectForm(data.subject);
+    };
+
+    document.getElementById('t-create').onclick = async () => {
+      const m = missionName();
+      if (!m) return setStatus('Выберите операцию');
+      const body = {
+        title: document.getElementById('t-title').value,
+        body: document.getElementById('t-body').value,
+        assignee: document.getElementById('t-assignee').value || null,
+        sector_uid: document.getElementById('t-sector').value || null,
+        return_by: document.getElementById('t-return').value
+          ? new Date(document.getElementById('t-return').value).toISOString()
+          : null
+      };
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/tasks', {
+        method: 'POST', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('Задание создано');
+      document.getElementById('t-title').value = '';
+      document.getElementById('t-body').value = '';
+      loadTasks();
+    };
+
+    document.getElementById('r-create').onclick = async () => {
+      const m = missionName();
+      if (!m) return setStatus('Выберите операцию');
+      const body = {
+        display_name: document.getElementById('r-name').value,
+        callsign: document.getElementById('r-callsign').value || null,
+        phone: document.getElementById('r-phone').value || null,
+        transport: document.getElementById('r-transport').value || null,
+        skills: document.getElementById('r-skills').value || null,
+        role_on_op: document.getElementById('r-role').value || null,
+        status: document.getElementById('r-status').value
+      };
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/roster', {
+        method: 'POST', body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) return setStatus(data.error || 'Ошибка');
+      setStatus('Добавлено в состав');
+      loadRoster();
+    };
+
+    document.getElementById('r-seed').onclick = async () => {
+      const m = missionName();
+      if (!m) return;
+      const res = await api('/api/missions/' + encodeURIComponent(m) + '/roster/seed_online', { method: 'POST', body: '{}' });
+      const data = await res.json();
+      setStatus('Подтянуто: ' + (data.added || 0));
+      loadRoster();
+    };
+
+    async function refreshAll() {
+      await loadSectors();
+      await loadSubject();
+      await loadTasks();
+      await loadRoster();
+    }
+
+    document.getElementById('reload').onclick = refreshAll;
+    document.getElementById('mission').onchange = () => {
+      const m = missionName();
+      history.replaceState(null, '', '?mission=' + encodeURIComponent(m));
+      refreshAll();
+    };
+    document.getElementById('t-filter').onchange = loadTasks;
+
+    (async () => {
+      await loadMissions();
+      await refreshAll();
+    })();
+  </script>
+</body>
+</html>

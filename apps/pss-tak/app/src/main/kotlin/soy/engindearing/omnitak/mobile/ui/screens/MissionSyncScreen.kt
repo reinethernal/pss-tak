@@ -67,6 +67,7 @@ import soy.engindearing.omnitak.mobile.domain.MissionOpsSnapshot
 import soy.engindearing.omnitak.mobile.domain.MissionServerStatus
 import soy.engindearing.omnitak.mobile.domain.ServerSyncSession
 import soy.engindearing.omnitak.mobile.data.TakMissionRosterEntry
+import soy.engindearing.omnitak.mobile.data.TakMissionSubject
 import soy.engindearing.omnitak.mobile.data.TakMissionTask
 import soy.engindearing.omnitak.mobile.i18n.Loc
 import soy.engindearing.omnitak.mobile.ui.theme.HostileRed
@@ -573,6 +574,24 @@ private fun MissionOpsSheet(
             }
             return
         }
+        val subject = ops?.subject
+        Text(
+            "ОРИЕНТИРОВКА",
+            color = TacticalAccent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (subject == null) {
+            Text(
+                "Ориентировка ещё не заполнена штабом",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            SubjectCard(subject)
+        }
+        Spacer(Modifier.height(20.dp))
         val tasks = ops?.tasks.orEmpty()
         val roster = ops?.roster.orEmpty()
         Text(
@@ -607,6 +626,49 @@ private fun MissionOpsSheet(
             )
         } else {
             roster.forEach { RosterCard(it) }
+        }
+    }
+}
+
+@Composable
+private fun SubjectCard(subject: TakMissionSubject) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(TacticalBackground)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                subject.fullName,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                subjectStatusRu(subject.status),
+                color = TacticalAccent,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        val bits = listOfNotNull(
+            subject.aliases?.takeIf { it.isNotBlank() }?.let { "Ещё: $it" },
+            listOfNotNull(subject.age, sexRu(subject.sex)).takeIf { it.isNotEmpty() }?.joinToString(", "),
+            subject.clothing?.takeIf { it.isNotBlank() }?.let { "Одежда: $it" },
+            subject.appearance?.takeIf { it.isNotBlank() }?.let { "Внешность: $it" },
+            subject.distinguishing?.takeIf { it.isNotBlank() }?.let { "Приметы: $it" },
+            subject.medical?.takeIf { it.isNotBlank() }?.let { "Медицина: $it" },
+            subject.lastSeenPlace?.takeIf { it.isNotBlank() }?.let { "Где видели: $it" },
+            subject.lastSeenAt?.takeIf { it.isNotBlank() }?.let { "Когда: $it" },
+            subject.notes?.takeIf { it.isNotBlank() },
+            subject.photoHash?.takeIf { it.isNotBlank() }?.let { "Фото в операции (hash ${it.take(12)}…)" },
+        )
+        bits.forEach {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -706,6 +768,20 @@ private fun rosterStatusRu(status: String): String = when (status) {
     "deployed" -> "в поле"
     "returned" -> "вернулся"
     else -> status
+}
+
+private fun subjectStatusRu(status: String): String = when (status) {
+    "active" -> "активна"
+    "found" -> "найден"
+    "cancelled" -> "снята"
+    else -> status
+}
+
+private fun sexRu(sex: String?): String? = when (sex) {
+    "m" -> "муж"
+    "f" -> "жен"
+    "unknown" -> "пол неизв."
+    else -> sex?.takeIf { it.isNotBlank() }
 }
 
 @Composable
