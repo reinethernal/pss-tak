@@ -380,6 +380,9 @@ class OmniTAKApp : Application() {
      *  (back to null) so a recomposition doesn't re-navigate. */
     val pendingChatConversation = MutableStateFlow<String?>(null)
 
+    /** Set when a ПСР task notification is tapped — AppNav opens Mission Sync. */
+    val pendingOpenMissionSync = MutableStateFlow(false)
+
     val chatStore: ChatStore by lazy {
         ChatStore().also { store ->
             // GAP-122 — Mesh primary channel always visible so users can

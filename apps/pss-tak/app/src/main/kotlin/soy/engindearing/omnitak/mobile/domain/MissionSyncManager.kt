@@ -182,9 +182,11 @@ class MissionSyncManager(
         return withContext(Dispatchers.IO) {
             runCatching {
                 val client = TakRestApiClient(sv, certVault)
+                // Fail loud on auth/network errors for tasks (do not look like “no tasks”).
+                val tasks = client.getMissionTasks(missionName)
                 MissionOpsSnapshot(
                     subject = runCatching { client.getMissionSubject(missionName) }.getOrNull(),
-                    tasks = runCatching { client.getMissionTasks(missionName) }.getOrDefault(emptyList()),
+                    tasks = tasks,
                     roster = runCatching { client.getMissionRoster(missionName) }.getOrDefault(emptyList()),
                 )
             }

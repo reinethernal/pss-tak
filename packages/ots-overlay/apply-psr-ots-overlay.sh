@@ -15,6 +15,7 @@ install -m 644 "$ROOT/site-packages/blueprints/ots_api/mission_ops_api.py" "$SIT
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/search_sector_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_invite_api.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_field_auth.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"

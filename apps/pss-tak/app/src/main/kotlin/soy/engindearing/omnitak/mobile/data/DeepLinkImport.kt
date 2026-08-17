@@ -247,6 +247,8 @@ object DeepLinkImport {
             ?: uri.getQueryParameter("trust"))?.lowercase()
         val trustSelfSigned = trustRaw !in setOf("false", "ca", "system", "0", "no")
 
+        val fieldRole = uri.getQueryParameter("role")?.takeIf { it.isNotBlank() }
+
         return ImportedServerConfig(
             name = name,
             host = host,
@@ -256,6 +258,7 @@ object DeepLinkImport {
             password = password,
             enrollmentPort = enrollmentPort,
             trustSelfSigned = trustSelfSigned,
+            fieldRole = fieldRole,
         )
     }
 

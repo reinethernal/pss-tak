@@ -159,9 +159,8 @@ fun EnrollServerScreen(onDone: () -> Unit) {
                                         protocol = ConnectionProtocol.TLS.wire,
                                         useTLS = true,
                                         username = username.trim().takeIf { it.isNotBlank() },
-                                        // password is the LOGIN credential, NOT the .p12 passphrase;
-                                        // it's intentionally not persisted post-enrollment
-                                        password = null,
+                                        // Keep login password for /api Basic fallback; mTLS is primary.
+                                        password = password.takeIf { it.isNotBlank() },
                                         certificateName = enrolled.certificateName,
                                         certificatePassword = enrolled.certificatePassword,
                                         // Pin against the enrollment CA on every future

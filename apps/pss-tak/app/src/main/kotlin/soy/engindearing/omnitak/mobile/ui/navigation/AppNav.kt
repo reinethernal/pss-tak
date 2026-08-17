@@ -134,6 +134,13 @@ fun AppNav() {
         app.pendingChatConversation.value = null
     }
 
+    val pendingMissionSync by app.pendingOpenMissionSync.collectAsState()
+    LaunchedEffect(pendingMissionSync) {
+        if (!pendingMissionSync) return@LaunchedEffect
+        navigateTo("missionsync")
+        app.pendingOpenMissionSync.value = false
+    }
+
     // Settings / Tools popup can request edit mode from another screen.
     val editGen by ToolbarEditBus.editGeneration.collectAsState()
     LaunchedEffect(editGen) {

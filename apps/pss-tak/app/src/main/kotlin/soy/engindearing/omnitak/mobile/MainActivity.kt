@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
         handleImportIntent(intent)
         handleChatNotificationIntent(intent)
+        handleMissionSyncNotificationIntent(intent)
 
         // Re-open the TLS socket on every foreground resume if Android
         // killed the read loop while we were backgrounded (Doze, app
@@ -93,6 +94,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         handleImportIntent(intent)
         handleChatNotificationIntent(intent)
+        handleMissionSyncNotificationIntent(intent)
     }
 
     /**
@@ -106,6 +108,18 @@ class MainActivity : ComponentActivity() {
         ) ?: return
         if (convoId.isBlank()) return
         (applicationContext as OmniTAKApp).pendingChatConversation.value = convoId
+    }
+
+    /** Task notification tap → open Mission Sync («Выезд»). */
+    private fun handleMissionSyncNotificationIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(
+                soy.engindearing.omnitak.mobile.domain.PsrTaskNotifier.EXTRA_OPEN_MISSION_SYNC,
+                false,
+            ) != true
+        ) {
+            return
+        }
+        (applicationContext as OmniTAKApp).pendingOpenMissionSync.value = true
     }
 
     /**
@@ -217,8 +231,9 @@ class MainActivity : ComponentActivity() {
                         protocol = ConnectionProtocol.TLS.wire,
                         useTLS = true,
                         username = cfg.username,
-                        // password is the login credential, not the .p12 passphrase
-                        password = null,
+                        // Keep enrollment credential (password or invite JWT) for /api Basic
+                        // auth fallback; primary field auth is mTLS client cert CN.
+                        password = cfg.password,
                         certificateName = enrolled.certificateName,
                         certificatePassword = enrolled.certificatePassword,
                         // Pin the enrollment CA so the connection validates the server's

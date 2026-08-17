@@ -364,13 +364,17 @@ private fun enrollAndAdd(
                     protocol = ConnectionProtocol.TLS.wire,
                     useTLS = true,
                     username = cfg.username,
-                    // password is the login/enrollment credential, not the .p12 passphrase
-                    password = null,
+                    // Keep enrollment credential for /api Basic fallback; mTLS is primary.
+                    password = cfg.password,
                     certificateName = enrolled.certificateName,
                     certificatePassword = enrolled.certificatePassword,
                     caCertificateName = enrolled.caCertificateName,
                 ),
             )
+            cfg.fieldRole?.let { roleRaw ->
+                val role = soy.engindearing.omnitak.mobile.data.FieldRole.fromRaw(roleRaw)
+                app.userPrefsStore.update { it.copy(fieldRole = role) }
+            }
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     appCtx,

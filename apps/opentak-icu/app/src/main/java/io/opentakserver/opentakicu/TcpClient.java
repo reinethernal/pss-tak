@@ -29,6 +29,7 @@ import io.opentakserver.opentakicu.cot.uid;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -155,27 +156,39 @@ public class TcpClient extends Thread implements SharedPreferences.OnSharedPrefe
             getSettings();
 
             if (atak_ssl) {
-                Log.d(TAG, "Connecting via SSL to a server with a self signed cert");
+                Log.d(TAG, "Connecting via SSL");
                 KeyStore trusted = KeyStore.getInstance("PKCS12");
                 FileInputStream trust_store = new FileInputStream(atak_trust_store);
-
-                KeyStore client_cert_keystore = KeyStore.getInstance("PKCS12");
-                FileInputStream client_cert = new FileInputStream(atak_client_cert);
-
                 trusted.load(trust_store, atak_trust_store_password.toCharArray());
                 trust_store.close();
-
-                client_cert_keystore.load(client_cert, atak_client_cert_password.toCharArray());
-                client_cert.close();
 
                 TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 trustManagerFactory.init(trusted);
 
+                javax.net.ssl.KeyManager[] keyManagers = null;
+                if (atak_client_cert != null && !atak_client_cert.isEmpty()) {
+                    File clientFile = new File(atak_client_cert);
+                    if (clientFile.isFile()) {
+                        KeyStore client_cert_keystore = KeyStore.getInstance("PKCS12");
+                        FileInputStream client_cert = new FileInputStream(clientFile);
+                        char[] clientPass = (atak_client_cert_password != null
+                                ? atak_client_cert_password
+                                : "atakatak").toCharArray();
+                        client_cert_keystore.load(client_cert, clientPass);
+                        client_cert.close();
+                        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                        // Use client cert password for KeyManager (not truststore password).
+                        kmf.init(client_cert_keystore, clientPass);
+                        keyManagers = kmf.getKeyManagers();
+                    } else {
+                        Log.w(TAG, "Client cert missing at " + atak_client_cert + " — SSL without client auth");
+                    }
+                } else {
+                    Log.w(TAG, "No client certificate configured — SSL without client auth (CoT may fail if server requires mTLS)");
+                }
 
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(client_cert_keystore, atak_trust_store_password.toCharArray());
                 SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
-                sslContext.init(kmf.getKeyManagers(),trustManagerFactory.getTrustManagers(),null);
+                sslContext.init(keyManagers, trustManagerFactory.getTrustManagers(), null);
 
                 SSLSocketFactory factory = sslContext.getSocketFactory();
                 sslSocket = (SSLSocket) factory.createSocket(serverAddr, port);

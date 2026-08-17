@@ -66,6 +66,14 @@ jobs:
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
       - run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Inject ПСР truststore into assets
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/assets
+          curl -fsSL --max-time 30 \
+            "https://fts.plasmadancer.ru/downloads/truststore-root.p12" \
+            -o app/src/main/assets/truststore-root.p12
+          test -s app/src/main/assets/truststore-root.p12
       - uses: gradle/actions/setup-gradle@v4
       - name: assembleDebug
         run: |
@@ -74,7 +82,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: apk-opentak-icu
-          path: apps/opentak-icu/app/build/outputs/apk/**/*.apk
+          path: apps/opentak-icu/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
 
