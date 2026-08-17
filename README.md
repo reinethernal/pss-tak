@@ -57,6 +57,7 @@
 **APK собираются только GitHub Actions** (`.github/workflows/ci.yml`). Локальный `./gradlew` / `scripts/build-*.sh` для публикации не используются.
 
 На **каждый push** — `assemblePsrDebug` обоих приложений → Artifacts.  
+Если в push менялось `apps/pss-tak/` или `apps/opentak-icu/`, CI поднимает **минор** (`x.Y.z` → `x.(Y+1).0`, `versionCode + 1`) и собирает уже новую версию; затем коммитит bump в `main`.  
 На push в `main` — F-Droid на GitHub Pages (2 APK).  
 Секрет `PSR_UPLOAD_KEYSTORE_B64` (тот же сертификат, что раньше на `fts.plasmadancer.ru/downloads`).
 

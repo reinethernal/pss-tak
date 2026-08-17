@@ -8,14 +8,14 @@ SourceCode: https://github.com/reinethernal/pss-tak
 IssueTracker: https://github.com/reinethernal/pss-tak/issues
 
 Name: ПСР TAK
-Summary: Единый полевой TAK-клиент ПСР
+Summary: Полевой TAK-клиент ПСР с картой и трансляцией
 Description: |
-  Отдельное приложение ПСР: карта, CoT, метки, фото/голос, задания миссии,
-  чат и режимы роли (поисковик / старший / полевой штаб).
-  Простота лёгкого клиента + нужный функционал ПСР.
-  Сервер не зашит: подключение через персональную ссылку штаба.
-  Видеострим — отдельное приложение «ПСР Видео» (открывается из настроек).
-  База: OmniTAK-Android. Upstream: https://github.com/engindearing-projects/OmniTAK-Android
+  Основное полевое приложение ПСР: карта, CoT, метки, фото/голос,
+  задания миссии, чат, режимы роли и встроенная трансляция камеры
+  на MediaMTX штаба.
+  Сервер в APK не зашит — подключение через персональную ссылку штаба.
+  ПСР Видео нужно только для USB-камеры или трансляции экрана.
+  База: OmniTAK-Android.
 
 RepoType: git
 Repo: https://github.com/reinethernal/pss-tak.git

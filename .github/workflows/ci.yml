@@ -20,6 +20,12 @@ jobs:
         working-directory: apps/pss-tak
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Minor bump if TAK sources changed
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: bash ../../scripts/ci-bump-if-apps-changed.sh pss-tak
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -62,6 +68,12 @@ jobs:
         working-directory: apps/opentak-icu
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Minor bump if ICU sources changed
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: bash ../../scripts/ci-bump-if-apps-changed.sh opentak-icu
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -94,6 +106,34 @@ jobs:
           path: apps/opentak-icu/app/build/outputs/apk/psr/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+  commit-versions:
+    name: Commit version bumps
+    needs: [build-pss-tak, build-opentak-icu]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Re-apply bumps and push if gradle changed
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          bash scripts/ci-bump-if-apps-changed.sh pss-tak
+          bash scripts/ci-bump-if-apps-changed.sh opentak-icu
+          git add apps/pss-tak/app/build.gradle.kts apps/opentak-icu/app/build.gradle.kts
+          if git diff --cached --quiet; then
+            echo "no version files to commit"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "chore(release): bump app versions after CI build"
+          git push origin HEAD:main
 
   # Свой F-Droid репозиторий → GitHub Pages (только main)
   # Avoid setup-java / setup-android / download-artifact actions: codeload.github.com

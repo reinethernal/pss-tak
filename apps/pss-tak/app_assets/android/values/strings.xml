@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ПСР TAK</string>
-    <string name="app_description">Единый полевой клиент ПСР: карта, метки, задания, чат (простота OmniTAK + нужный функционал ATAK)</string>
+    <string name="app_description">Полевой клиент ПСР: карта, метки, задания, чат и встроенная трансляция камеры. Подключение — персональная ссылка штаба.</string>
 
     <!-- Map -->
     <string name="map_loading">Loading map…</string>

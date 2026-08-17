@@ -8,11 +8,12 @@ SourceCode: https://github.com/reinethernal/pss-tak
 IssueTracker: https://github.com/reinethernal/pss-tak/issues
 
 Name: ПСР Видео
-Summary: Живое видео на MediaMTX ПСР
+Summary: USB / экран / камера на MediaMTX ПСР
 Description: |
-  Отдельное приложение для трансляции камеры/экрана на сервер ПСР
-  (MediaMTX + CoT на OpenTAKServer).
-  Хост в APK не зашит — адрес приходит из ссылки штаба или из ПСР TAK.
+  Дополнительное приложение для трансляции USB-камеры, экрана телефона
+  или камеры на сервер ПСР (MediaMTX + CoT).
+  Обычный эфир с поля делается в ПСР TAK (Инструменты → Трансляция).
+  Хост в APK не зашит — адрес приходит из ссылки штаба.
 
 RepoType: git
 Repo: https://github.com/reinethernal/pss-tak.git
