@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import soy.engindearing.omnitak.mobile.domain.LiveStreamCot
 import soy.engindearing.omnitak.mobile.domain.LocalMarkerStore
 import kotlinx.coroutines.launch
 import soy.engindearing.omnitak.mobile.data.AdminResponse
@@ -688,6 +689,7 @@ class OmniTAKApp : Application() {
         broadcasterPrefsJob = null
     }
     val locationProvider: LocationProvider by lazy { LocationProvider(this) }
+    val liveStreamCot: LiveStreamCot by lazy { LiveStreamCot(this, appScope) }
     // #83 — device compass heading for the Cesium triangle self-marker, so it
     // rotates with the operator's facing just like the 2D RenderMode.COMPASS
     // puck. Started/stopped by MapScreen only while the globe is on screen.

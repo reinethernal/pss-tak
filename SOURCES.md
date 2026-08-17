@@ -24,6 +24,7 @@
 | Имя приложения **«PSS TAK»**, описание под ПСР (`app_assets/.../strings.xml`) | Отличать сборку от стокового OmniTAK |
 | При пустом списке серверов ничего не добавляется — подключение через invite (`tak://…/enroll?host=…`) | APK можно раздавать публично; сервер задаёт штаб ссылкой |
 | CI / monorepo layout (`apps/pss-tak`), артефакты APK | Сборка вместе с ICU и публикация в свой F-Droid |
+| Встроенная трансляция (RootEncoder RTSP + CoT `__video`) | Эфир с карты без отдельного ICU |
 
 Функционально это тот же OmniTAK (карта, CoT, мессенджер, Meshtastic и т.д.) — без претензии заменить ATAK CIV по возможностям.
 
@@ -38,7 +39,7 @@
 | Изменение | Зачем |
 |-----------|--------|
 | Хост в Preferences / XML **пустой** по умолчанию | Не привязывать APK к одному OTS |
-| **`InviteConfig`**: `opentakicu://import` пишет RTSP/CoT и качает CA по `truststore_url` | Ссылка штаба (или кнопка из ПСР TAK) настраивает приложение |
+| **`InviteConfig`**: `opentakicu://import` пишет RTSP/CoT и качает CA | Для стокового / ПСР ICU с той же invite-ссылки |
 | `PsrServerDefaults` больше не заполняет хост | Нет baked-in сервера |
 | **`truststore-root.p12` в git не коммитится** (только на build-хосте / в assets при локальной сборке с CA) | Не светить CA в публичном репозитории |
 | Убраны Firebase / Crashlytics / `google-services.json` | Секрет Google API key утёк в git; аналитика для ПСР не нужна; CI собирается без файла |

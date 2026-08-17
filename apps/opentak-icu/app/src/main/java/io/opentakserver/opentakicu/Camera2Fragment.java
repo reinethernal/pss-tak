@@ -146,7 +146,7 @@ public class Camera2Fragment extends Fragment
             activity.startService(new Intent(activity, Camera2Service.class));
         }
 
-        Camera2Service.observer.observe(getViewLifecycleOwner(), cameraService -> {
+            Camera2Service.observer.observe(getViewLifecycleOwner(), cameraService -> {
             Log.d(LOGTAG, "observer");
             camera_service = cameraService;
             if (cameraService != null) {
@@ -161,6 +161,7 @@ public class Camera2Fragment extends Fragment
                 camera_service.startPreview(openGlView);
                 Log.d(LOGTAG, "Observer started preview");
             }
+            handler.postDelayed(this::tryAutostart, 400);
         });
     }
 
@@ -448,6 +449,32 @@ public class Camera2Fragment extends Fragment
             } else {
                 Log.d(LOGTAG, "onResume didn't start preview " + (camera_service == null) + " " + (openGlView == null));
             }
+        }
+        handler.postDelayed(this::tryAutostart, 400);
+    }
+
+    /** TAK / invite set STREAM_AUTOSTART — start camera publish once the service is ready. */
+    private void tryAutostart() {
+        if (pref == null || activity == null || camera_service == null || bStartStop == null) return;
+        if (!pref.getBoolean(Preferences.STREAM_AUTOSTART, Preferences.STREAM_AUTOSTART_DEFAULT)) return;
+        if (service_bound) {
+            pref.edit().putBoolean(Preferences.STREAM_AUTOSTART, false).apply();
+            return;
+        }
+        pref.edit().putBoolean(Preferences.STREAM_AUTOSTART, false).apply();
+        String videoSource = pref.getString(Preferences.VIDEO_SOURCE, Preferences.VIDEO_SOURCE_DEFAULT);
+        if (Preferences.VIDEO_SOURCE_SCREEN.equals(videoSource)) {
+            Log.i(LOGTAG, "autostart skipped: screen capture needs a tap");
+            return;
+        }
+        if (!psrRequireStreamAuth()) return;
+        Log.i(LOGTAG, "autostart: binding Camera2Service");
+        activity.bindService(new Intent(activity, Camera2Service.class), mConnection, Context.BIND_IMPORTANT);
+        bStartStop.setImageResource(R.drawable.stop);
+        lockScreenOrientation();
+        if (pref.getBoolean(Preferences.RECORD_VIDEO, Preferences.RECORD_VIDEO_DEFAULT)) {
+            tvRecording.setText(R.string.yes);
+            tvRecording.setTextColor(Color.GREEN);
         }
     }
 
@@ -761,6 +788,10 @@ public class Camera2Fragment extends Fragment
         setStatusState();
 
         Log.d(LOGTAG, "Got pref " + s);
+        if (s != null && s.equals(Preferences.STREAM_AUTOSTART)
+                && sharedPreferences.getBoolean(Preferences.STREAM_AUTOSTART, false)) {
+            handler.postDelayed(this::tryAutostart, 200);
+        }
         if (s != null && s.equals(Preferences.VIDEO_SOURCE)) {
             setZoomRange();
             // If video source is no longer Screen, hide the screen-capture overlay.

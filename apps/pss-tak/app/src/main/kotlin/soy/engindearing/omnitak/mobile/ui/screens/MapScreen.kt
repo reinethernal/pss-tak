@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.LocalHospital
@@ -128,7 +129,8 @@ private const val CONTACT_TAP_DEFER_PX = 72.0
 
 @Composable
 fun MapScreen(onOpenTab: (String) -> Unit = {}) {
-    val app = LocalContext.current.applicationContext as OmniTAKApp
+    val context = LocalContext.current
+    val app = context.applicationContext as OmniTAKApp
     // Issue #89 — status-bar inset in dp. enableEdgeToEdge lets content draw
     // under the system bars; overlays anchored near the top (compass, MapLibre
     // built-in compass) add this so they clear the shifted ATAKStatusBar.
@@ -1731,6 +1733,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                 ToolEntry("rangerings", Icons.Filled.TrackChanges, "Range Rings"),
                 ToolEntry("reports", Icons.Filled.Description, "Reports"),
                 ToolEntry("layers", Icons.Filled.Layers, "Layers"),
+                ToolEntry("stream", Icons.Filled.Videocam, Loc.t("tools.liveStream")),
                 // ADS-B moved to the ADS-B plugin — its on/off control now
                 // lives in Settings → Plugins → ADS-B (the plugin's
                 // settingsContent), not the Tools drawer.
@@ -1766,6 +1769,7 @@ fun MapScreen(onOpenTab: (String) -> Unit = {}) {
                         drawingPickerOpen = true
                     }
                     "layers" -> layersSheetOpen = true
+                    "stream" -> onOpenTab("stream")
                     "chat" -> onOpenTab("chat")
                     "missionsync" -> onOpenTab("missionsync")
                     "fema" -> {

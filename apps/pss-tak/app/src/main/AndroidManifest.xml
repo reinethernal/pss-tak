@@ -16,6 +16,8 @@
          the service still runs, the persistent chip just doesn't show. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Bluetooth LE for the Meshtastic BLE transport (Android 12+). -->
@@ -54,6 +56,9 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.location.network"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
         android:required="false" />
 
     <!-- Android 11+: allow detecting/launching companion video app -->
@@ -108,6 +113,10 @@
             android:name=".domain.TAKConnectionService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".domain.LiveStreamService"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone" />
 
         <!-- Issue #16 — FileProvider for lasso exports (KML / Mission
              Package zip) so we can hand them to the system share sheet

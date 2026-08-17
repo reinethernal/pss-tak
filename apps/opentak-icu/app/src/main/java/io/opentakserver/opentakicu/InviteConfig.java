@@ -20,7 +20,8 @@ import io.opentakserver.opentakicu.contants.Preferences;
  * address, ports and CA come from the URI the operator opened.
  *
  * {@code opentakicu://import?address=…&port=8554&protocol=rtsp&path=…&username=…
- * &atak_address=…&atak_port=8089&truststore_url=https://…/truststore-root.p12}
+ * &password=…&atak_address=…&atak_port=8089&autostart=1
+ * &truststore_url=https://…/truststore-root.p12}
  */
 public final class InviteConfig {
     private static final String TAG = "InviteConfig";
@@ -77,6 +78,11 @@ public final class InviteConfig {
         String selfSigned = first(data, "self_signed_cert");
         if (selfSigned != null) {
             ed.putBoolean(Preferences.STREAM_SELF_SIGNED_CERT, truthy(selfSigned));
+            any = true;
+        }
+        String autostart = first(data, "autostart", "start");
+        if (autostart != null) {
+            ed.putBoolean(Preferences.STREAM_AUTOSTART, truthy(autostart));
             any = true;
         }
 

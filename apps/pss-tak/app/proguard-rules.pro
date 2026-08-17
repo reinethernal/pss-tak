@@ -58,6 +58,10 @@
 # Companion in com.google.android.gms.internal.location.zze — ignore.
 -dontwarn com.google.android.gms.internal.location.**
 
+# --- RootEncoder (pedro) -----------------------------------------------
+-keep class com.pedro.** { *; }
+-dontwarn com.pedro.**
+
 # --- WebView JS bridge --------------------------------------------------
 # The Cesium 3D globe (CesiumMapView) exposes onReady/onMapEvent to the
 # scene's JavaScript via @JavascriptInterface. R8 would otherwise strip or

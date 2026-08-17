@@ -36,6 +36,9 @@ enum class BarCommand {
 
     /** Toggle the 3D terrain map mode (map3dEnabled pref). */
     ENGINE_TOGGLE,
+
+    /** Launch ПСР Видео and start a live stream. */
+    LIVE_STREAM,
 }
 
 /** A bar entry is either a NavHost destination or a command. */
@@ -91,6 +94,7 @@ object ToolbarCatalog {
         BarItem("tools", "Tools", Icons.Filled.Handyman, cTools, BarKind.Command(BarCommand.TOOLS)),
         BarItem("lasso", "Select", Icons.Filled.Gesture, cLasso, BarKind.Command(BarCommand.LASSO)),
         BarItem("engine", "2D / 3D", Icons.Filled.Public, cMap, BarKind.Command(BarCommand.ENGINE_TOGGLE)),
+        BarItem("stream", "Трансляция", Icons.Filled.Videocam, cCamera, BarKind.Command(BarCommand.LIVE_STREAM)),
     )
 
     val all: List<BarItem> = destinations + commands

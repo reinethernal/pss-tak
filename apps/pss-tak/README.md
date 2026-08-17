@@ -8,23 +8,18 @@
 
 ## Сборка
 
-```bash
-./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk
-```
-
-JDK 17, Android SDK (platform 35), желательно NDK `28.2.13676358`.
+APK собирает **только GitHub Actions** (workflow `CI` в корне монорепо).  
+Локальный `./gradlew` для публикации не используется.
 
 ## CI
 
-На **каждый push** в любую ветку GitHub Actions (workflow `CI`):
+На **каждый push** GitHub Actions:
 
-1. Собирает debug APK  
-2. Кладёт его в **Artifacts** (хранить 14 дней)  
-3. Гоняет unit-тесты  
+1. Собирает `assemblePsrDebug`
+2. Кладёт APK в **Artifacts** (14 дней)
+3. На `main` публикует F-Droid на GitHub Pages
 
-Ручной запуск: Actions → CI → Run workflow.  
-Теги дополнительно публикуют APK в GitHub Release.
+Ручной запуск: Actions → CI → Run workflow.
 
 
 ## F-Droid

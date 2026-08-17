@@ -33,6 +33,9 @@ public class Preferences {
     public static final String STREAM_CERTIFICATE_DEFAULT = null;
     public static final String STREAM_CERTIFICATE_PASSWORD = "certificate_password";
     public static final String STREAM_CERTIFICATE_PASSWORD_DEFAULT = "atakatak";
+    /** One-shot: start publishing after invite / TAK handoff. Consumed by Camera2Fragment. */
+    public static final String STREAM_AUTOSTART = "psr_autostart";
+    public static final boolean STREAM_AUTOSTART_DEFAULT = false;
 
     /* Video Preferences */
     public static final String VIDEO_RESOLUTION = "resolution";

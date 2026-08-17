@@ -15,16 +15,15 @@
 | **Клиенты на телефоне** | Подключение полевых по SSL CoT `:8089`, enrollment `:8446`; видео — RTSP/RTSPS |
 | **Этот GitHub-репозиторий** | Сборка и раздача клиентов ПСР (форки открытых проектов + datapackage для ATAK CIV) |
 
-Рекомендуемый полевой клиент: **ПСР TAK** (лёгкий + нужный функционал ПСР).  
+Рекомендуемый полевой клиент: **ПСР TAK** (карта/CoT/чат + встроенная трансляция).  
 Подключение к серверу — **персональная ссылка штаба**, хост в APK не зашит.  
-Живое видео: **ПСР Видео** (та же ссылка или кнопка «Стрим» из TAK).  
 Тяжёлый HQ / плагины ATAK: **ATAK CIV** + zip из `packages/atak-config` (опция).
 
 ## Что внутри монорепо
 
 | Путь | Что это | Зачем |
 |------|---------|--------|
-| [`apps/pss-tak`](apps/pss-tak/) | APK **ПСР TAK** (`ru.plasmadancer.psr.tak`) | Единый полевой клиент: карта/CoT/чат/задания/метки |
+| [`apps/pss-tak`](apps/pss-tak/) | APK **ПСР TAK** (`ru.plasmadancer.psr.tak`) | Полевой клиент: карта/CoT/чат/задания + трансляция камеры |
 | [`apps/opentak-icu`](apps/opentak-icu/) | APK **ПСР Видео** (`ru.plasmadancer.psr.icu`) | Стрим камеры/экрана на MediaMTX ПСР + CoT на OTS |
 | [`packages/atak-config`](packages/atak-config/) | ZIP для **ATAK CIV** | Data package / field kit: хост, порты, truststore — без сборки самого ATAK |
 | [`fdroid/`](fdroid/) | Свой F-Droid | Раздача обоих APK через GitHub Pages |
@@ -55,18 +54,14 @@
 
 ## CI
 
-На **каждый push** собираются debug APK (`assemblePsrDebug` для обоих приложений) → Artifacts.  
-На push в `main` дополнительно обновляется F-Droid на GitHub Pages (2 APK).  
-CI требует секрет `PSR_UPLOAD_KEYSTORE_B64` (base64 от `~/.android/debug.keystore` build-сервера).
+**APK собираются только GitHub Actions** (`.github/workflows/ci.yml`). Локальный `./gradlew` / `scripts/build-*.sh` для публикации не используются.
 
-## Локальная сборка
+На **каждый push** — `assemblePsrDebug` обоих приложений → Artifacts.  
+На push в `main` — F-Droid на GitHub Pages (2 APK).  
+Секрет `PSR_UPLOAD_KEYSTORE_B64` (тот же сертификат, что раньше на `fts.plasmadancer.ru/downloads`).
 
-```bash
-cd apps/pss-tak && ./gradlew assemblePsrDebug
-cd apps/opentak-icu && ./gradlew assemblePsrDebug
-```
-
-JDK 17, Android SDK platform 35.
+Готовые файлы: [Actions](https://github.com/reinethernal/pss-tak/actions) и F-Droid выше.  
+На штабной `/downloads` APK копируются скриптом `scripts/sync-apks-from-ci.sh` (скачивает артефакты CI, Gradle не запускает).
 
 ## F-Droid.org
 

@@ -55,6 +55,7 @@ fun ToolsLauncherSheet(
     onLasso: () -> Unit,
     onUAS: () -> Unit = {},
     onOnvifCamera: () -> Unit = {},
+    onLiveStream: () -> Unit = {},
     onGoToCoordinate: () -> Unit = {},
     onCustomize: () -> Unit = {},
     onMapOverlays: () -> Unit = {},
@@ -116,6 +117,18 @@ fun ToolsLauncherSheet(
                 title = "Vehicle Connect (UAS / UGV)",
                 subtitle = "MAVLink drones, rovers & boats — PX4 / ArduPilot, telemetry to CoT",
                 onClick = onUAS,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 76.dp),
+                color = Color.White.copy(alpha = 0.08f),
+            )
+
+            ToolsRow(
+                icon = { Icon(Icons.Filled.Videocam, contentDescription = null, tint = Color(0xFFFF3B30)) },
+                title = Loc.t("tools.liveStream"),
+                subtitle = Loc.t("tools.liveStream.desc"),
+                onClick = onLiveStream,
             )
 
             HorizontalDivider(

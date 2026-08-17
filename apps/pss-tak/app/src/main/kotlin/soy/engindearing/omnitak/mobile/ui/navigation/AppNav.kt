@@ -48,7 +48,8 @@ import soy.engindearing.omnitak.mobile.ui.screens.UASScreen
 
 @Composable
 fun AppNav() {
-    val app = LocalContext.current.applicationContext as OmniTAKApp
+    val context = LocalContext.current
+    val app = context.applicationContext as OmniTAKApp
     val prefs by app.userPrefsStore.prefs.collectAsState(initial = UserPrefs())
     val scope = rememberCoroutineScope()
 
@@ -191,6 +192,7 @@ fun AppNav() {
                         }
                     }
                 }
+                BarCommand.LIVE_STREAM -> navigateTo("stream")
             }
         }
     }
@@ -264,6 +266,9 @@ fun AppNav() {
             composable("onvif") {
                 soy.engindearing.omnitak.mobile.ui.screens.OnvifCameraScreen(onDone = { nav.popBackStack() })
             }
+            composable("stream") {
+                soy.engindearing.omnitak.mobile.ui.screens.LiveStreamScreen(onDone = { nav.popBackStack() })
+            }
             composable("chat") { ChatScreen() }
             composable(
                 route = "chat?convoId={convoId}",
@@ -311,6 +316,7 @@ fun AppNav() {
                     onOpenPlugins = { pluginId -> nav.navigate("settings/plugin/$pluginId") },
                     onOpenPluginsList = { nav.navigate("plugins") },
                     onOpenProfiles = { nav.navigate("settings/profiles") },
+                    onOpenLiveStream = { navigateTo("stream") },
                 )
             }
             composable("settings/profiles") {
@@ -364,6 +370,10 @@ fun AppNav() {
                     popUpTo(nav.graph.startDestinationId) { saveState = true }
                     launchSingleTop = true
                 }
+            },
+            onLiveStream = {
+                showToolsLauncher = false
+                navigateTo("stream")
             },
             onCustomize = {
                 showToolsLauncher = false

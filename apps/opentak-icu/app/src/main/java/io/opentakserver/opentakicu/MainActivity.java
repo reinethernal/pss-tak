@@ -43,7 +43,10 @@ public class MainActivity extends AppCompatActivity {
         Uri deepLinkData = getIntent().getData();
 
 
-        if (!hasPermissions(this, PERMISSIONS) || (deepLinkData != null && "import".equals(deepLinkData.getHost()))) {
+        // Import from TAK / HQ only needs onboarding when permissions are missing.
+        // Config is already written by InviteConfig; forcing the wizard every
+        // time blocked one-tap «Включить трансляцию».
+        if (!hasPermissions(this, PERMISSIONS)) {
             Intent intent = new Intent(this, OnBoardingActivity.class);
             if(deepLinkData != null){
                 intent.setData(deepLinkData);
@@ -76,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
         if (data != null) {
             InviteConfig.apply(this, data);
         }
-        if (data != null && "import".equals(data.getHost())) {
+        if (data != null && !hasPermissions(this, PERMISSIONS)) {
             Intent onboarding = new Intent(this, OnBoardingActivity.class);
             onboarding.setData(data);
             startActivity(onboarding);

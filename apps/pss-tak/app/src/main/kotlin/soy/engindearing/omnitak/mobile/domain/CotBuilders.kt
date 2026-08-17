@@ -176,6 +176,51 @@ object CotBuilders {
         )
     }
 
+    /**
+     * Phone livestream locator — ATAK Video / OTS play `__video` + ConnectionEntry
+     * (host/port/path split). Type `b-m-p-s-p-loc` matches OpenTAK ICU.
+     */
+    fun buildPhoneStreamEvent(
+        uid: String,
+        callsign: String,
+        lat: Double,
+        lon: Double,
+        hae: Double,
+        host: String,
+        port: Int = 8554,
+        path: String,
+        protocol: String = "rtsp",
+        staleSeconds: Long = 30,
+    ): String {
+        val url = "$protocol://$host:$port/$path"
+        val detail = buildString {
+            append("<detail>")
+            append("<contact callsign=\"").append(CotXml.escape(callsign)).append("\"/>")
+            append("<__video url=\"").append(CotXml.escape(url)).append("\" uid=\"")
+            append(CotXml.escape(uid)).append("\">")
+            append("<ConnectionEntry")
+            append(" address=\"").append(CotXml.escape(host)).append("\"")
+            append(" alias=\"").append(CotXml.escape(path)).append("\"")
+            append(" uid=\"").append(CotXml.escape(uid)).append("\"")
+            append(" port=\"").append(port).append("\"")
+            append(" path=\"").append(CotXml.escape(path)).append("\"")
+            append(" protocol=\"").append(CotXml.escape(protocol)).append("\"")
+            append(" rtspReliable=\"1\" networkTimeout=\"5000\" bufferTime=\"-1\" roverPort=\"-1\"")
+            append("/>")
+            append("</__video>")
+            append("</detail>")
+        }
+        return CotXml.buildEvent(
+            uid = uid,
+            type = "b-m-p-s-p-loc",
+            how = "m-g",
+            lat = lat, lon = lon, hae = hae,
+            timeIso = nowIso(),
+            staleIso = isoOffset(staleSeconds),
+            detailXml = detail,
+        )
+    }
+
     /** Fresh random TAK-style UID. */
     fun newUid(): String = UUID.randomUUID().toString()
 
