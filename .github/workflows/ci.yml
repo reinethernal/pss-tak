@@ -198,7 +198,8 @@ jobs:
           import os, glob
           sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT') or ''
           aapts = sorted(glob.glob(str(Path(sdk) / 'build-tools' / '*' / 'aapt'))) if sdk else []
-          aapt = aapts[-1] if aapts else ''
+          aapt35 = str(Path(sdk) / 'build-tools' / '35.0.0' / 'aapt') if sdk else ''
+          aapt = aapt35 if aapt35 and Path(aapt35).is_file() else (aapts[-1] if aapts else '')
           print('sdk_path', sdk, 'aapt', aapt)
           Path('fdroid/icon.png').write_bytes(Path('fdroid/repo/icons/icon.png').read_bytes())
           Path('fdroid/config.yml').write_text(
