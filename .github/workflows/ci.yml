@@ -169,10 +169,12 @@ jobs:
           rm -f fdroid/repo/.gitkeep
           find fdroid/repo -maxdepth 1 -type f ! -name '*.apk' -delete || true
           find /tmp/apks -name '*.apk' -print
-          cp "$(find /tmp/apks/apk-pss-tak -path '*/psr/debug/*.apk' | head -1)" \
-            "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
-          cp "$(find /tmp/apks/apk-opentak-icu -path '*/psr/debug/*.apk' | head -1)" \
-            "fdroid/repo/opentak-icu-psr-$(git rev-parse --short HEAD).apk"
+          tak_apk="$(find /tmp/apks/apk-pss-tak -name '*.apk' -type f | head -1)"
+          icu_apk="$(find /tmp/apks/apk-opentak-icu -name '*.apk' -type f | head -1)"
+          test -n "$tak_apk" || { echo "missing TAK APK artifact"; exit 1; }
+          test -n "$icu_apk" || { echo "missing ICU APK artifact"; exit 1; }
+          cp "$tak_apk" "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
+          cp "$icu_apk" "fdroid/repo/opentak-icu-psr-$(git rev-parse --short HEAD).apk"
           cat > fdroid/config.yml <<EOF
           repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
           repo_name: ПСР
