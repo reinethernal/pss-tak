@@ -96,6 +96,8 @@ jobs:
           retention-days: 14
 
   # Свой F-Droid репозиторий → GitHub Pages (только main)
+  # Avoid setup-java / setup-android / download-artifact actions: codeload.github.com
+  # rate-limits (429/503) have been failing this job after APKs already built.
   publish-fdroid:
     name: F-Droid repo → Pages
     needs: [build-pss-tak, build-opentak-icu]
@@ -109,25 +111,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - uses: android-actions/setup-android@v3
-      - name: Install fdroidserver + apksigner deps
+      - name: Install Java, Python, Android SDK, fdroidserver
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq apksigner aapt libmagic1
-          pip install "fdroidserver==2.4.4" "androguard==4.1.4"
+          sudo apt-get install -y -qq openjdk-17-jdk-headless python3 python3-pip python3-venv \
+            unzip wget curl apksigner aapt libmagic1 git
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+
+          ANDROID_HOME="$HOME/android-sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -fsSL -o /tmp/cmdtools.zip \
+            https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/tmp/sdk-licenses.txt || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
+
+          python3 -m venv /tmp/fdroid-venv
+          /tmp/fdroid-venv/bin/pip install -q "fdroidserver==2.4.4" "androguard==4.1.4"
+          echo "/tmp/fdroid-venv/bin" >> "$GITHUB_PATH"
           # fdroidserver 2.4.4 forces apkobject._v2_blocks = NoOverwriteDict() as a
           # workaround for old androguard; androguard 4.1+ uses a list and .append().
-          python3 - <<'PY'
+          /tmp/fdroid-venv/bin/python3 - <<'PY'
           from pathlib import Path
           import fdroidserver.common as common
           path = Path(common.__file__)
@@ -144,14 +156,42 @@ jobs:
           )
           print(f"patched {path}")
           PY
-          # aapt from SDK is more reliable for AGP 8+ APKs than androguard alone
-          yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
-          sdkmanager "build-tools;35.0.0"
 
-      - name: Download APK artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: /tmp/apks
+      - name: Download APK artifacts (API)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/apks
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+            > /tmp/artifacts.json
+          python3 - <<'PY'
+          import json, os, subprocess, zipfile
+          from pathlib import Path
+          data = json.loads(Path("/tmp/artifacts.json").read_text())
+          wanted = {"apk-pss-tak", "apk-opentak-icu"}
+          token = os.environ["GH_TOKEN"]
+          found = {}
+          for a in data.get("artifacts") or []:
+              if a["name"] in wanted and not a.get("expired"):
+                  found[a["name"]] = a["id"]
+          if set(found) != wanted:
+              raise SystemExit(f"missing artifacts: have={sorted(found)} need={sorted(wanted)}")
+          for name, aid in found.items():
+              zpath = Path(f"/tmp/{name}.zip")
+              dest = Path("/tmp/apks") / name
+              dest.mkdir(parents=True, exist_ok=True)
+              subprocess.check_call([
+                  "curl", "-fsSL", "-H", f"Authorization: Bearer {token}",
+                  "-H", "Accept: application/vnd.github+json",
+                  "-o", str(zpath),
+                  f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts/{aid}/zip",
+              ])
+              with zipfile.ZipFile(zpath) as zf:
+                  zf.extractall(dest)
+              print(name, "->", list(dest.rglob("*.apk")))
+          PY
 
       - name: Prepare fdroid workspace
         env:
@@ -176,18 +216,6 @@ jobs:
           test -n "$icu_apk" || { echo "missing ICU APK artifact"; exit 1; }
           cp "$tak_apk" "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
           cp "$icu_apk" "fdroid/repo/opentak-icu-psr-$(git rev-parse --short HEAD).apk"
-          cat > fdroid/config.yml <<EOF
-          repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
-          repo_name: ПСР
-          repo_description: Полевой репозиторий ПСР (ПСР TAK + ПСР Видео) для fts.plasmadancer.ru
-          archive_older: 0
-          make_current_version_link: false
-          keystore: keystore.jks
-          repo_keyalias: ${FDROID_REPO_KEY_ALIAS}
-          keystorepass: ${FDROID_REPO_KEYSTORE_PASS}
-          keypass: ${FDROID_REPO_KEY_PASS}
-          EOF
-          # YAML indent from heredoc — rewrite cleanly without leading spaces
           python3 - <<'PY'
           from pathlib import Path
           import os, glob
@@ -262,15 +290,19 @@ jobs:
           cp -a fdroid/repo _site/fdroid/repo
           cp fdroid/site/index.html _site/index.html
           cp fdroid/site/repo-qr.png _site/repo-qr.png
-          # also expose README
           cp fdroid/README.md _site/fdroid/README.md || true
-          # GitHub Pages must not run Jekyll (it would skip .jar / ignore some binaries).
           touch _site/.nojekyll
 
       - name: Deploy to GitHub Pages (gh-pages)
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _site
-          publish_branch: gh-pages
-          force_orphan: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd _site
+          git init
+          git checkout --orphan gh-pages
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "F-Droid repo ${GITHUB_SHA}"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages

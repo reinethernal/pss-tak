@@ -11,7 +11,10 @@ TOKEN="$(tr -d '\n' < "$TOKEN_FILE")"
 API="https://api.github.com/repos/${REPO}"
 AUTH=(-H "Authorization: Bearer ${TOKEN}" -H "Accept: application/vnd.github+json")
 
-run_id="$(curl -sS "${AUTH[@]}" "${API}/actions/runs?branch=main&status=success&per_page=20" | python3 -c '
+if [[ -n "${RUN_ID:-}" ]]; then
+  run_id="$RUN_ID"
+else
+  run_id="$(curl -sS "${AUTH[@]}" "${API}/actions/runs?branch=main&status=success&per_page=20" | python3 -c '
 import json, sys
 data = json.load(sys.stdin)
 for r in data.get("workflow_runs") or []:
@@ -20,6 +23,7 @@ for r in data.get("workflow_runs") or []:
         raise SystemExit(0)
 raise SystemExit("no successful CI run on main")
 ')"
+fi
 
 echo "CI run $run_id"
 tmp="$(mktemp -d)"
