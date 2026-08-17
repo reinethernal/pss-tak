@@ -41,16 +41,14 @@ jobs:
           bash ../../scripts/psr-upload-keystore.sh
           echo "PSR_UPLOAD_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-      - name: assembleDebug (psr + legacy compat)
+      - name: assembleDebug (psr)
         run: |
           chmod +x gradlew
-          ./gradlew assemblePsrDebug assembleCompatDebug --stacktrace
+          ./gradlew assemblePsrDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: apk-pss-tak
-          path: |
-            apps/pss-tak/app/build/outputs/apk/psr/debug/*.apk
-            apps/pss-tak/app/build/outputs/apk/compat/debug/*.apk
+          path: apps/pss-tak/app/build/outputs/apk/psr/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -85,16 +83,14 @@ jobs:
           bash ../../scripts/psr-upload-keystore.sh
           echo "PSR_UPLOAD_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-      - name: assembleDebug (psr + legacy compat)
+      - name: assembleDebug (psr)
         run: |
           chmod +x gradlew
-          ./gradlew assemblePsrDebug assembleCompatDebug --stacktrace
+          ./gradlew assemblePsrDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: apk-opentak-icu
-          path: |
-            apps/opentak-icu/app/build/outputs/apk/psr/debug/*.apk
-            apps/opentak-icu/app/build/outputs/apk/compat/debug/*.apk
+          path: apps/opentak-icu/app/build/outputs/apk/psr/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -175,12 +171,8 @@ jobs:
           find /tmp/apks -name '*.apk' -print
           cp "$(find /tmp/apks/apk-pss-tak -path '*/psr/debug/*.apk' | head -1)" \
             "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
-          cp "$(find /tmp/apks/apk-pss-tak -path '*/compat/debug/*.apk' | head -1)" \
-            "fdroid/repo/pss-tak-compat-$(git rev-parse --short HEAD).apk"
           cp "$(find /tmp/apks/apk-opentak-icu -path '*/psr/debug/*.apk' | head -1)" \
             "fdroid/repo/opentak-icu-psr-$(git rev-parse --short HEAD).apk"
-          cp "$(find /tmp/apks/apk-opentak-icu -path '*/compat/debug/*.apk' | head -1)" \
-            "fdroid/repo/opentak-icu-compat-$(git rev-parse --short HEAD).apk"
           cat > fdroid/config.yml <<EOF
           repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
           repo_name: ПСР
@@ -232,10 +224,8 @@ jobs:
           import json
           from pathlib import Path
           expected = {
-              "io.opentakserver.opentakicu.debug",
               "ru.plasmadancer.psr.icu",
               "ru.plasmadancer.psr.tak",
-              "soy.engindearing.omnitak.mobile",
           }
           idx = json.loads(Path("repo/index-v1.json").read_text())
           pkgs = set(idx["packages"])

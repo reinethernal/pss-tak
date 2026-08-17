@@ -7,17 +7,15 @@
 
 Раздаёт клиенты для OpenTAKServer ПСР. Контекст сервиса — в корневом [README.md](../README.md).
 
-## Клиенты (4 package id — для обновления старых установок)
+## Клиенты
 
 | packageId | Приложение |
 |-----------|------------|
-| `ru.plasmadancer.psr.tak` | **ПСР TAK** (новые установки) |
-| `soy.engindearing.omnitak.mobile` | **PSR TAK legacy** — обновление поверх старого OmniTAK/PSS |
-| `ru.plasmadancer.psr.icu` | **ПСР Видео** (новые установки) |
-| `io.opentakserver.opentakicu.debug` | **ICU legacy** — обновление поверх старого OpenTAK ICU PSR |
+| `ru.plasmadancer.psr.tak` | **ПСР TAK** |
+| `ru.plasmadancer.psr.icu` | **ПСР Видео** |
 
-Все четыре APK подписаны **одним upload-ключом** (тот же сертификат, что APK на `fts.plasmadancer.ru/downloads`).
+Оба APK подписаны **одним upload-ключом** (тот же сертификат, что APK на `fts.plasmadancer.ru/downloads`).
 
-CI: `assemblePsrDebug` + `assembleCompatDebug` → `fdroid update --delete-unknown` → GitHub Pages.
+CI: `assemblePsrDebug` → `fdroid update --delete-unknown` → GitHub Pages.
 
 В `repo/` не должно быть ничего кроме APK (никаких `.gitkeep`): F-Droid индексирует посторонние файлы как фейковые пакеты и клиент **не обновляет репозиторий**.
