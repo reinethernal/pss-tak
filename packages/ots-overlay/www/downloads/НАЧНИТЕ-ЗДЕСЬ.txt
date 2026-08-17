@@ -1,19 +1,10 @@
-ПСР — единый полевой клиент
-=============================
+Главное приложение в поле: ПСР TAK.
+Видео — отдельное: ПСР Видео.
 
-Главное приложение в поле: PSS TAK.
-ATAK CIV — опция для опытных / спец. плагинов.
+1) Установите ПСР TAK
+   F-Droid: https://reinethernal.github.io/pss-tak/
+   или APK с сервера / downloads
 
-1) Установите PSS TAK
-   https://fts.plasmadancer.ru/downloads/PSS-TAK-latest.apk
+2) Откройте персональную ссылку штаба → enrollment
 
-2) Откройте персональную ссылку от штаба → enrollment
-
-3) Настройки → Режим поля (Поисковик по умолчанию)
-
-4) Видео (по желанию): OpenTAK ICU
-
-Штаб: https://fts.plasmadancer.ru/map
-Операция: /downloads/psr-operation.html?mission=ИМЯ
-
-Подробнее: psr-start.txt и FEATURES.md в репозитории.
+3) Видео (по желанию): ПСР Видео

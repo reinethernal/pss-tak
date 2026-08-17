@@ -1,4 +1,4 @@
-# Свой F-Droid репозиторий PSS TAK
+# Свой F-Droid репозиторий ПСР
 
 Публикуется на GitHub Pages:
 
@@ -11,7 +11,9 @@
 
 | packageId | Приложение |
 |-----------|------------|
-| `soy.engindearing.omnitak.mobile` | PSS TAK |
-| `io.opentakserver.opentakicu.debug` | OpenTAK ICU (debug) |
+| `ru.plasmadancer.psr.tak` | **ПСР TAK** — единый полевой клиент (карта, метки, задания, чат) |
+| `ru.plasmadancer.psr.icu` | **ПСР Видео** — трансляция камеры/экрана на MediaMTX |
+
+Старые package id (`soy.engindearing.omnitak.mobile`, `io.opentakserver.opentakicu.debug`) больше не публикуются: это отдельные приложения, обновление поверх старых APK не сработает — нужна новая установка из этого репозитория.
 
 CI на каждый push собирает APK, обновляет индекс `fdroid update` и выкладывает на `gh-pages`.

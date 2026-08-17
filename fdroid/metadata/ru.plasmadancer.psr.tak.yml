@@ -1,0 +1,20 @@
+Categories:
+  - Navigation
+  - Connectivity
+License: Apache-2.0
+AuthorName: ПСР / plasmadancer
+WebSite: https://github.com/reinethernal/pss-tak
+SourceCode: https://github.com/reinethernal/pss-tak
+IssueTracker: https://github.com/reinethernal/pss-tak/issues
+
+Name: ПСР TAK
+Summary: Единый полевой TAK-клиент ПСР
+Description: |
+  Отдельное приложение ПСР: карта, CoT, метки, фото/голос, задания миссии,
+  чат и режимы роли (поисковик / старший / полевой штаб).
+  Простота лёгкого клиента + нужный функционал ПСР; сервер fts.plasmadancer.ru из коробки.
+  Видеострим — отдельное приложение «ПСР Видео» (открывается из настроек).
+  База: OmniTAK-Android. Upstream: https://github.com/engindearing-projects/OmniTAK-Android
+
+RepoType: git
+Repo: https://github.com/reinethernal/pss-tak.git

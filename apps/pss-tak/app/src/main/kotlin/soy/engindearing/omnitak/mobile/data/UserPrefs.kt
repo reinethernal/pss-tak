@@ -158,8 +158,8 @@ data class UserPrefs(
     val relayGatewayEnabled: Boolean = false,
     /** Unified SAR — progressive disclosure mode (Поисковик / Старший / Штаб). */
     val fieldRole: FieldRole = FieldRole.SEARCHER,
-    /** Optional package id for OpenTAK ICU deep-link («Открыть стрим»). */
-    val icuPackageId: String = "com.brian.opentakicu",
+    /** Optional package id for ПСР Видео deep-link («Открыть стрим»). */
+    val icuPackageId: String = "ru.plasmadancer.psr.icu",
 )
 
 class UserPrefsStore(private val context: Context) {
@@ -389,7 +389,7 @@ class UserPrefsStore(private val context: Context) {
         stalenessOverlayEnabled = p[KEY_STALENESS_OVERLAY] ?: false,
         relayGatewayEnabled = p[KEY_RELAY_GATEWAY] ?: false,
         fieldRole = FieldRole.fromRaw(p[KEY_FIELD_ROLE]),
-        icuPackageId = p[KEY_ICU_PACKAGE] ?: "com.brian.opentakicu",
+        icuPackageId = p[KEY_ICU_PACKAGE] ?: "ru.plasmadancer.psr.icu",
     )
 
     // ATAK / OpenTakServer canonical team names are Title Case ("Cyan",

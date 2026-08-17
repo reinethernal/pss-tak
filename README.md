@@ -1,4 +1,4 @@
-# PSS TAK
+# PSS TAK / ПСР — клиенты
 
 Полевые Android-клиенты и пакеты настроек для **системы ПСР** (поиск и спасение / situational awareness) на сервере OpenTAKServer:
 
@@ -15,18 +15,18 @@
 | **Клиенты на телефоне** | Подключение полевых по SSL CoT `:8089`, enrollment `:8446`; видео — RTSP/RTSPS |
 | **Этот GitHub-репозиторий** | Сборка и раздача клиентов ПСР (форки открытых проектов + datapackage для ATAK CIV) |
 
-Рекомендуемый полный клиент в поле: **ATAK CIV** + zip настроек из `packages/atak-config`.  
-Лёгкий запасной клиент: **PSS TAK**.  
-Живое видео с телефона: **OpenTAK ICU**.
+Рекомендуемый полевой клиент: **ПСР TAK** (лёгкий + нужный функционал ПСР).  
+Живое видео с телефона: **ПСР Видео** (отдельное приложение).  
+Тяжёлый HQ / плагины ATAK: **ATAK CIV** + zip из `packages/atak-config` (опция).
 
 ## Что внутри монорепо
 
 | Путь | Что это | Зачем |
 |------|---------|--------|
-| [`apps/pss-tak`](apps/pss-tak/) | APK **PSS TAK** | Лёгкий TAK-клиент (карта/CoT/чат) с сервером ПСР из коробки |
-| [`apps/opentak-icu`](apps/opentak-icu/) | APK **OpenTAK ICU** | Стрим камеры/экрана на MediaMTX ПСР + CoT на OTS |
+| [`apps/pss-tak`](apps/pss-tak/) | APK **ПСР TAK** (`ru.plasmadancer.psr.tak`) | Единый полевой клиент: карта/CoT/чат/задания/метки |
+| [`apps/opentak-icu`](apps/opentak-icu/) | APK **ПСР Видео** (`ru.plasmadancer.psr.icu`) | Стрим камеры/экрана на MediaMTX ПСР + CoT на OTS |
 | [`packages/atak-config`](packages/atak-config/) | ZIP для **ATAK CIV** | Data package / field kit: хост, порты, truststore — без сборки самого ATAK |
-| [`fdroid/`](fdroid/) | Свой F-Droid | Раздача APK через GitHub Pages |
+| [`fdroid/`](fdroid/) | Свой F-Droid | Раздача обоих APK через GitHub Pages |
 
 Откуда взяты оригиналы и **какие правки сделаны** — в [SOURCES.md](SOURCES.md).  
 Для пользователей (что умеет сервис и когда пригодится) — [FEATURES.md](FEATURES.md).  
@@ -41,6 +41,8 @@
 
 - Fingerprint: `061cac831dec49c4c6dfd7c49f2d6f075e2bbbe4ca623e7765ed99a9187609c8`
 - Подробнее: [fdroid/README.md](fdroid/README.md)
+
+В репозитории два **отдельных** приложения: **ПСР TAK** и **ПСР Видео**.
 
 ## CI
 

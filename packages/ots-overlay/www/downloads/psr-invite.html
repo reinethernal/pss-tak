@@ -33,7 +33,7 @@
     <p id="status" class="muted">Загрузка…</p>
   </div>
   <script>
-    const PKG_PSS = 'soy.engindearing.omnitak.mobile';
+    const PKG_PSS = 'ru.plasmadancer.psr.tak';
     const PKG_ATAK = 'com.atakmap.app.civ';
     const params = new URLSearchParams(location.search);
     const t = params.get('t') || params.get('token') || '';
@@ -102,15 +102,15 @@
           '<div class="warn">В Chrome / Telegram / WhatsApp ссылка <code>tak://</code> сама по себе часто <strong>не открывает</strong> приложение. Используйте кнопки ниже или QR-код камерой телефона.</div>' +
 
           '<h2>1. Установите приложение</h2>' +
-          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">Скачать PSS TAK (APK)</a>' +
-          '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">OpenTAK ICU</a>' +
+          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">Скачать ПСР TAK (APK)</a>' +
+          '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">ПСР Видео</a>' +
           '<a class="btn secondary" href="' + (d.field_kit || '/downloads/psr-field-kit.zip') + '">Комплект ATAK</a>' +
 
           '<h2>2. Открыть enrollment</h2>' +
-          '<a class="btn big" id="btnPss" href="' + intentPss + '">Открыть в PSS TAK</a>' +
+          '<a class="btn big" id="btnPss" href="' + intentPss + '">Открыть в ПСР TAK</a>' +
           '<a class="btn big secondary" id="btnAtak" href="' + intentAtak + '">Открыть в ATAK CIV</a>' +
           '<button type="button" class="btn secondary" id="btnOmni">Ещё раз (схема omnitak://)</button>' +
-          '<p class="muted">Если ничего не открылось — установите PSS TAK, затем снова нажмите кнопку. Либо отсканируйте QR камерой (не из браузера).</p>' +
+          '<p class="muted">Если ничего не открылось — установите ПСР TAK, затем снова нажмите кнопку. Либо отсканируйте QR камерой (не из браузера).</p>' +
           '<img class="qr" alt="QR enrollment" src="' + qrImg + '" width="220" height="220" />' +
 
           '<h2>3. Сертификат и настройки (если enrollment не сработал)</h2>' +
@@ -120,7 +120,7 @@
 
           '<h2>Кратко</h2>' +
           '<ul class="muted">' +
-          '<li>Установите <strong>PSS TAK</strong> → кнопка «Открыть в PSS TAK».</li>' +
+          '<li>Установите <strong>ПСР TAK</strong> → кнопка «Открыть в ПСР TAK».</li>' +
           '<li>Логин <strong>' + data.username + '</strong>, пароль учётки — от штаба отдельно.</li>' +
           '<li>ATAK CIV — опция (Play + zip), если штаб просит.</li>' +
           '</ul>' +

@@ -18,11 +18,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "io.opentakserver.opentakicu"
+        applicationId = "ru.plasmadancer.psr.icu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10602
-        versionName = "1.7.1-psr"
+        versionCode = 10700
+        versionName = "1.8.0-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -54,7 +54,8 @@ android {
         }
 
         getByName("debug") {
-            applicationIdSuffix = ".debug"
+            // Same applicationId as release — F-Droid publishes this PSR build
+            // as a distinct app (ru.plasmadancer.psr.icu), not …icu.debug.
             isDebuggable = true
         }
     }

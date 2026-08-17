@@ -1,0 +1,19 @@
+Categories:
+  - Multimedia
+  - Connectivity
+License: Apache-2.0
+AuthorName: ПСР / plasmadancer
+WebSite: https://github.com/reinethernal/pss-tak
+SourceCode: https://github.com/reinethernal/pss-tak
+IssueTracker: https://github.com/reinethernal/pss-tak/issues
+
+Name: ПСР Видео
+Summary: Живое видео на MediaMTX ПСР
+Description: |
+  Отдельное приложение для трансляции камеры/экрана на сервер ПСР
+  (MediaMTX + CoT на OpenTAKServer, fts.plasmadancer.ru).
+  Ставится рядом с «ПСР TAK»; из полевого клиента открывается кнопкой «Стрим».
+  База: OpenTAK ICU. Upstream: https://github.com/brian7704/OpenTAK_ICU
+
+RepoType: git
+Repo: https://github.com/reinethernal/pss-tak.git

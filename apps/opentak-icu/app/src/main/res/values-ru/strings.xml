@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OpenTAK ICU ПСР</string>
+    <string name="app_name">ПСР Видео</string>
     <string name="version">Version: %1$s</string>
     <string name="action_settings">Настройки</string>
     <!-- Strings used for fragments for navigation -->
