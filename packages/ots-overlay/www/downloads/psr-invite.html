@@ -96,7 +96,7 @@
 
         main.innerHTML =
           '<h1>Подключение к ПСР</h1>' +
-          '<p><strong>Логин:</strong> <span class="mono">' + data.username + '</span></p>' +
+          '<p><strong>Логин / позывной:</strong> <span class="mono">' + data.username + '</span></p>' +
           '<p class="muted">' + (data.hint || '') + '</p>' +
           '<p><strong>Пароль корневого сертификата (P12):</strong> <span class="mono ok">' + (data.ca_password || 'atakatak') + '</span></p>' +
           '<p class="muted">Сервер: ' + (s.host || '') + ' · CoT SSL :' + (s.cot_ssl || 8089) +
@@ -113,6 +113,7 @@
           '<a class="btn big" id="btnPss" href="' + intentPss + '">Открыть в ПСР TAK</a>' +
           '<a class="btn big secondary" id="btnIcu" href="' + (intentIcu || '#') + '">Открыть в ПСР Видео</a>' +
           '<a class="btn big secondary" id="btnAtak" href="' + intentAtak + '">Открыть в ATAK CIV</a>' +
+          '<a class="btn big secondary" id="btnAtakCs" href="' + (data.intent_atak_callsign || '#') + '">Прописать позывной в ATAK</a>' +
           '<button type="button" class="btn secondary" id="btnOmni">Ещё раз (схема omnitak://)</button>' +
           '<p class="muted">Если ничего не открылось — установите приложение, затем снова нажмите кнопку. Либо отсканируйте QR камерой (не из браузера).</p>' +
           '<img class="qr" alt="QR enrollment" src="' + qrImg + '" width="220" height="220" />' +
@@ -126,7 +127,7 @@
           '<ul class="muted">' +
           '<li>Установите <strong>ПСР TAK</strong> → «Открыть в ПСР TAK» (ссылка сама пропишет сервер).</li>' +
           '<li>Для видео — «Открыть в ПСР Видео» (тот же сервер, без ручных настроек).</li>' +
-          '<li>Логин <strong>' + data.username + '</strong>, пароль учётки — от штаба отдельно.</li>' +
+          '<li>Логин и позывной на карте: <strong>' + data.username + '</strong>. Пароль учётки — от штаба отдельно.</li>' +
           '<li>ATAK CIV — опция (Play + zip), если штаб просит.</li>' +
           '</ul>' +
           '<details class="muted"><summary>Техническая ссылка</summary><p class="mono">' + tak.replace(/</g,'') + '</p></details>';
@@ -139,6 +140,13 @@
           ev.preventDefault();
           openDeepLink(tak, PKG_ATAK);
         });
+        var btnAtakCs = document.getElementById('btnAtakCs');
+        if (btnAtakCs && data.qr_pref_callsign) {
+          btnAtakCs.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            openDeepLink(data.qr_pref_callsign, PKG_ATAK);
+          });
+        }
         var btnIcu = document.getElementById('btnIcu');
         if (btnIcu && icu) {
           btnIcu.addEventListener('click', function (ev) {

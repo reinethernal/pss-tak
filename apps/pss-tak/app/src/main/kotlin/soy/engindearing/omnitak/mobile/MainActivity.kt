@@ -243,10 +243,19 @@ class MainActivity : ComponentActivity() {
                         caCertificateName = enrolled.caCertificateName,
                     ),
                 )
-                cfg.fieldRole?.let { roleRaw ->
-                    val role = soy.engindearing.omnitak.mobile.data.FieldRole.fromRaw(roleRaw)
+                val callsign = cfg.callsign?.takeIf { it.isNotBlank() }
+                    ?: cfg.username?.takeIf { it.isNotBlank() }
+                val role = cfg.fieldRole?.let {
+                    soy.engindearing.omnitak.mobile.data.FieldRole.fromRaw(it)
+                }
+                if (callsign != null || role != null) {
                     launch {
-                        app.userPrefsStore.update { it.copy(fieldRole = role) }
+                        app.userPrefsStore.update { cur ->
+                            cur.copy(
+                                callsign = callsign ?: cur.callsign,
+                                fieldRole = role ?: cur.fieldRole,
+                            )
+                        }
                     }
                 }
                 Log.i("OmniTAK", "Enrolled + added server '${cfg.name}' from $uri")

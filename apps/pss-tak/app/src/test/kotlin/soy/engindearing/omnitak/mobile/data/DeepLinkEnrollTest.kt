@@ -120,10 +120,23 @@ class DeepLinkEnrollTest {
         assertEquals("argustak.com", cfg.host)
         assertEquals(8089, cfg.port)            // connection port from host:port
         assertEquals("alpha", cfg.username)
+        assertEquals("alpha", cfg.callsign)     // callsign defaults to username
         assertEquals("secret", cfg.password)    // token mapped to enroll secret
         assertEquals(8446, cfg.enrollmentPort)  // separate default enroll port
         assertTrue(cfg.useTLS)
         assertTrue(cfg.needsEnrollment)
+    }
+
+    @Test
+    fun parseEnrollLink_explicitCallsignOverridesUsername() {
+        val uri = parsed(
+            "tak://com.atakmap.app/enroll?host=tak.example.com&username=u&token=t&callsign=BRAVO-1",
+        )
+        assumeTrue("Uri.parse stubbed on JVM", uri != null)
+        val cfg = DeepLinkImport.parseEnrollLink(uri!!)
+        assertTrue(cfg != null)
+        assertEquals("BRAVO-1", cfg!!.callsign)
+        assertEquals("u", cfg.username)
     }
 
     @Test

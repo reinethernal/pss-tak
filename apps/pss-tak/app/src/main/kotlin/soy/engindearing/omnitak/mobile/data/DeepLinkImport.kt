@@ -45,6 +45,8 @@ data class ImportedServerConfig(
     val trustSelfSigned: Boolean = true,
     /** Optional Unified SAR field role from invite (`role=SEARCHER|LEAD|FIELD_HQ`). */
     val fieldRole: String? = null,
+    /** Map marker name. Invite sets this from OTS username when omitted. */
+    val callsign: String? = null,
 ) {
     /**
      * A TLS server with username + password can't connect with bare creds —
@@ -168,6 +170,8 @@ object DeepLinkImport {
 
         val name = uri.getQueryParameter("name")?.takeIf { it.isNotBlank() } ?: host
         val fieldRole = uri.getQueryParameter("role")?.takeIf { it.isNotBlank() }
+        val callsign = uri.getQueryParameter("callsign")?.takeIf { it.isNotBlank() }
+            ?: username
 
         return ImportedServerConfig(
             name = name,
@@ -179,6 +183,7 @@ object DeepLinkImport {
             enrollmentPort = enrollmentPort,
             trustSelfSigned = trustSelfSigned,
             fieldRole = fieldRole,
+            callsign = callsign,
         )
     }
 
@@ -248,6 +253,8 @@ object DeepLinkImport {
         val trustSelfSigned = trustRaw !in setOf("false", "ca", "system", "0", "no")
 
         val fieldRole = uri.getQueryParameter("role")?.takeIf { it.isNotBlank() }
+        val callsign = uri.getQueryParameter("callsign")?.takeIf { it.isNotBlank() }
+            ?: username
 
         return ImportedServerConfig(
             name = name,
@@ -259,6 +266,7 @@ object DeepLinkImport {
             enrollmentPort = enrollmentPort,
             trustSelfSigned = trustSelfSigned,
             fieldRole = fieldRole,
+            callsign = callsign,
         )
     }
 
