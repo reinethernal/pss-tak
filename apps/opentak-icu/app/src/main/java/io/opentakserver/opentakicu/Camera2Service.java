@@ -445,7 +445,17 @@ public class Camera2Service extends Service implements ConnectChecker,
         if (udpStream != null)
             return udpStream;
 
-        return  new RtspStream(getApplicationContext(), this);
+        rtspStream = new RtspStream(getApplicationContext(), this);
+        return rtspStream;
+    }
+
+    private StreamBase activeStreamFor(String proto) {
+        if (proto == null) return null;
+        if (proto.startsWith("rtmp")) return rtmpStream;
+        if (proto.equals("srt")) return srtStream;
+        if (proto.startsWith("rtsp")) return rtspStream;
+        if (proto.equals("udp")) return udpStream;
+        return null;
     }
 
     public void startPreview(OpenGlView openGlView) {
@@ -992,9 +1002,12 @@ public class Camera2Service extends Service implements ConnectChecker,
         uid = preferences.getString(Preferences.UID, Preferences.UID_DEFAULT);
 
         String oldProtocol = protocol;
-        protocol = preferences.getString(Preferences.STREAM_PROTOCOL, Preferences.STREAM_PROTOCOL_DEFAULT);
+        protocol = Preferences.normalizeProtocol(
+                preferences.getString(Preferences.STREAM_PROTOCOL, Preferences.STREAM_PROTOCOL_DEFAULT));
 
-        if (!protocol.equals(oldProtocol)) {
+        boolean needNewClient = oldProtocol == null || !protocol.equals(oldProtocol)
+                || activeStreamFor(protocol) == null;
+        if (needNewClient) {
             if (protocol.startsWith("rtmp")) {
                 rtmpStream = new RtmpStream(getApplicationContext(), this);
                 rtspStream = null;
@@ -1020,7 +1033,8 @@ public class Camera2Service extends Service implements ConnectChecker,
 
         /* Stream Preferences */
         stream = preferences.getBoolean(Preferences.STREAM_VIDEO, Preferences.STREAM_VIDEO_DEFAULT);
-        address = preferences.getString(Preferences.STREAM_ADDRESS, Preferences.STREAM_ADDRESS_DEFAULT);
+        address = Preferences.hostOnly(
+                preferences.getString(Preferences.STREAM_ADDRESS, Preferences.STREAM_ADDRESS_DEFAULT));
         port = Integer.parseInt(preferences.getString(Preferences.STREAM_PORT, Preferences.STREAM_PORT_DEFAULT));
         path = preferences.getString(Preferences.STREAM_PATH, Preferences.STREAM_PATH_DEFAULT);
         tcp = preferences.getBoolean(Preferences.STREAM_USE_TCP, Preferences.STREAM_USE_TCP_DEFAULT);
@@ -1255,6 +1269,11 @@ public class Camera2Service extends Service implements ConnectChecker,
 
     public void startStream() {
         Log.d(LOGTAG, "startStream");
+        if (address == null || address.isEmpty()) {
+            Log.e(LOGTAG, "No stream address — open HQ invite or set host in settings");
+            showNotification(getString(R.string.connection_failed) + ": no server address", false);
+            return;
+        }
         if (!getStream().isStreaming() && !getStream().isRecording()) {
             if (protocol.equals("rtsp") && tcp) {
                 RtspStreamClient rtspStreamClient = (RtspStreamClient) getStream().getStreamClient();

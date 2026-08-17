@@ -36,10 +36,32 @@ public final class InviteConfig {
         SharedPreferences.Editor ed = prefs.edit();
         boolean any = false;
 
-        any |= put(ed, Preferences.STREAM_ADDRESS, first(data, "address", "host"));
-        any |= put(ed, Preferences.STREAM_PORT, first(data, "port", "stream_port"));
-        any |= put(ed, Preferences.STREAM_PROTOCOL, first(data, "protocol"));
-        any |= put(ed, Preferences.STREAM_PATH, first(data, "path"));
+        String address = first(data, "address", "host");
+        String protocol = first(data, "protocol");
+        String port = first(data, "port", "stream_port");
+        String path = first(data, "path");
+        if (address != null && address.contains("://")) {
+            try {
+                Uri stream = Uri.parse(address);
+                if (protocol == null && stream.getScheme() != null) protocol = stream.getScheme();
+                if (stream.getHost() != null) address = stream.getHost();
+                if (port == null && stream.getPort() > 0) port = String.valueOf(stream.getPort());
+                if ((path == null || path.isEmpty()) && stream.getPath() != null) {
+                    String p = stream.getPath();
+                    if (p.startsWith("/")) p = p.substring(1);
+                    if (!p.isEmpty()) path = p;
+                }
+            } catch (Exception ignored) {
+                address = Preferences.hostOnly(address);
+            }
+        } else if (address != null) {
+            address = Preferences.hostOnly(address);
+        }
+
+        any |= put(ed, Preferences.STREAM_ADDRESS, address);
+        any |= put(ed, Preferences.STREAM_PORT, port);
+        any |= put(ed, Preferences.STREAM_PROTOCOL, Preferences.normalizeProtocol(protocol));
+        any |= put(ed, Preferences.STREAM_PATH, path);
         any |= put(ed, Preferences.STREAM_USERNAME, first(data, "username", "user"));
         any |= put(ed, Preferences.STREAM_PASSWORD, first(data, "password", "pw"));
         any |= put(ed, Preferences.ATAK_SERVER_ADDRESS, first(data, "atak_address", "cot_host"));
@@ -59,12 +81,9 @@ public final class InviteConfig {
         }
 
         // If invite gave a stream host but no CoT host, reuse it.
-        if (prefs.getString(Preferences.ATAK_SERVER_ADDRESS, "").isEmpty()) {
-            String streamHost = first(data, "address", "host");
-            if (streamHost != null) {
-                ed.putString(Preferences.ATAK_SERVER_ADDRESS, streamHost);
-                any = true;
-            }
+        if (prefs.getString(Preferences.ATAK_SERVER_ADDRESS, "").isEmpty() && address != null) {
+            ed.putString(Preferences.ATAK_SERVER_ADDRESS, address);
+            any = true;
         }
 
         ed.apply();
@@ -74,7 +93,7 @@ public final class InviteConfig {
             new Thread(() -> downloadTruststore(context, trustUrl), "icu-truststore").start();
         }
         if (any) {
-            Log.i(TAG, "Applied invite config host=" + first(data, "address", "host"));
+            Log.i(TAG, "Applied invite config host=" + address + " protocol=" + Preferences.normalizeProtocol(protocol));
         }
         return any;
     }

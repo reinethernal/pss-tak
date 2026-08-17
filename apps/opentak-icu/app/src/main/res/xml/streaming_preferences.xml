@@ -7,7 +7,7 @@
             android:key="stream_video"
             android:title="@string/stream_video" />
         <ListPreference
-            android:defaultValue="1"
+            android:defaultValue="rtsp"
             android:entries="@array/protocols"
             android:entryValues="@array/protocols"
             android:key="protocol"

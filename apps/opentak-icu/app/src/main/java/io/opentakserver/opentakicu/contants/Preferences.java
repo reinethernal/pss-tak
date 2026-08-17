@@ -3,6 +3,7 @@ package io.opentakserver.opentakicu.contants;
 import com.pedro.common.AudioCodec;
 import com.pedro.common.VideoCodec;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public class Preferences {
@@ -102,4 +103,45 @@ public class Preferences {
     public static final String ATAK_SERVER_SSL_CLIENT_CERTIFICATE_DEFAULT = null;
     public static final String ATAK_SERVER_SSL_CLIENT_CERTIFICATE_PASSWORD = "client_cert_password";
     public static final String ATAK_SERVER_SSL_CLIENT_CERTIFICATE_PASSWORD_DEFAULT = "atakatak";
+
+    /**
+     * ListPreference used to persist {@code defaultValue="1"} (index, not a scheme).
+     * RootEncoder then treats that as UDP and rejects {@code 1://host:port/...}.
+     */
+    public static String normalizeProtocol(String raw) {
+        if (raw == null) return STREAM_PROTOCOL_DEFAULT;
+        String p = raw.trim().toLowerCase(Locale.ROOT);
+        if (p.endsWith(":")) p = p.substring(0, p.length() - 1);
+        switch (p) {
+            case "rtsp":
+            case "rtsps":
+            case "rtmp":
+            case "rtmps":
+            case "srt":
+            case "udp":
+                return p;
+            default:
+                return STREAM_PROTOCOL_DEFAULT;
+        }
+    }
+
+    /** Host only — invite / paste of {@code rtsp://host:8554/path} must not become the address. */
+    public static String hostOnly(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
+        if (s.isEmpty()) return "";
+        int scheme = s.indexOf("://");
+        if (scheme >= 0) s = s.substring(scheme + 3);
+        int at = s.lastIndexOf('@');
+        if (at >= 0) s = s.substring(at + 1);
+        int slash = s.indexOf('/');
+        if (slash >= 0) s = s.substring(0, slash);
+        if (s.startsWith("[")) {
+            int end = s.indexOf(']');
+            if (end > 0) return s.substring(1, end);
+        }
+        int colon = s.indexOf(':');
+        if (colon >= 0) s = s.substring(0, colon);
+        return s;
+    }
 }

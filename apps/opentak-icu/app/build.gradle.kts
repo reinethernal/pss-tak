@@ -21,8 +21,8 @@ android {
         applicationId = "ru.plasmadancer.psr.icu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10711
-        versionName = "1.11.1-psr"
+        versionCode = 10712
+        versionName = "1.11.2-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
