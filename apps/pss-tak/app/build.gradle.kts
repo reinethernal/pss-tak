@@ -21,8 +21,8 @@ android {
         applicationId = "ru.plasmadancer.psr.tak"
         minSdk = 26
         targetSdk = 35
-        versionCode = 117
-        versionName = "0.52.0"
+        versionCode = 118
+        versionName = "0.53.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
