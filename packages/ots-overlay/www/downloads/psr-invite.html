@@ -10,16 +10,20 @@
     body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--fg); padding:16px; }
     .card { background:var(--card); border-radius:12px; padding:16px; max-width:560px; margin:0 auto 12px; }
     h1 { font-size:1.25rem; margin:0 0 8px; }
+    h2 { font-size:1.05rem; margin:16px 0 8px; }
     .muted { color:var(--muted); font-size:.92rem; }
     a.btn, button.btn {
-      display:inline-block; margin:6px 6px 0 0; padding:10px 14px; border-radius:8px;
+      display:inline-block; margin:6px 6px 0 0; padding:12px 14px; border-radius:8px;
       background:var(--acc); color:#fff; text-decoration:none; border:0; font-weight:600; cursor:pointer;
     }
-    a.btn.secondary { background:#2a3548; }
-    code, .mono { font-family: ui-monospace, monospace; word-break:break-all; }
+    a.btn.secondary, button.btn.secondary { background:#2a3548; }
+    a.btn.big { display:block; text-align:center; margin:8px 0; }
+    code, .mono { font-family: ui-monospace, monospace; word-break:break-all; font-size:.85rem; }
     ul { padding-left:1.2rem; }
     .err { color:#ff8a8a; }
     .ok { color:var(--ok); }
+    .qr { display:block; margin:12px auto; background:#fff; padding:10px; border-radius:8px; max-width:220px; }
+    .warn { background:#2a2410; border:1px solid #6a5a20; border-radius:8px; padding:10px 12px; margin:10px 0; font-size:.92rem; }
   </style>
 </head>
 <body>
@@ -29,10 +33,43 @@
     <p id="status" class="muted">Загрузка…</p>
   </div>
   <script>
+    const PKG_PSS = 'soy.engindearing.omnitak.mobile';
+    const PKG_ATAK = 'com.atakmap.app.civ';
     const params = new URLSearchParams(location.search);
     const t = params.get('t') || params.get('token') || '';
     const status = document.getElementById('status');
     const main = document.getElementById('main');
+
+    /** Chrome/Android often ignore bare tak:// from HTTPS — use intent:// */
+    function toIntent(takUrl, pkg) {
+      try {
+        const u = new URL(takUrl);
+        const pathQuery = (u.hostname || '') + (u.pathname || '') + (u.search || '');
+        const fallback = location.href;
+        return 'intent://' + pathQuery +
+          '#Intent;scheme=' + encodeURIComponent(u.protocol.replace(':','')) +
+          ';package=' + pkg +
+          ';S.browser_fallback_url=' + encodeURIComponent(fallback) +
+          ';end';
+      } catch (e) {
+        return takUrl;
+      }
+    }
+
+    function openDeepLink(takUrl, pkg) {
+      const intent = toIntent(takUrl, pkg);
+      // Prefer intent on Android; also try raw scheme as fallback
+      const a = document.createElement('a');
+      a.href = intent;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => {
+        // Some WebViews ignore intent:// — try raw scheme
+        try { location.href = takUrl; } catch (_) {}
+      }, 800);
+    }
 
     async function load() {
       if (!t) {
@@ -48,6 +85,12 @@
         }
         const d = data.downloads || {};
         const s = data.server || {};
+        const tak = data.qr_string || '';
+        const omni = tak.replace(/^tak:/i, 'omnitak:').replace(/^atak:/i, 'omnitak:');
+        const intentPss = toIntent(tak, PKG_PSS);
+        const intentAtak = toIntent(tak, PKG_ATAK);
+        const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&ecc=M&data=' + encodeURIComponent(tak);
+
         main.innerHTML =
           '<h1>Подключение к ПСР</h1>' +
           '<p><strong>Логин:</strong> <span class="mono">' + data.username + '</span></p>' +
@@ -55,24 +98,45 @@
           '<p><strong>Пароль корневого сертификата (P12):</strong> <span class="mono ok">' + (data.ca_password || 'atakatak') + '</span></p>' +
           '<p class="muted">Сервер: ' + (s.host || '') + ' · CoT SSL :' + (s.cot_ssl || 8089) +
           ' · enrollment :' + (s.enrollment || 8446) + '</p>' +
-          '<h2 style="font-size:1.05rem;margin:16px 0 8px">1. Приложения</h2>' +
-          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">PSS TAK (APK)</a>' +
+
+          '<div class="warn">В Chrome / Telegram / WhatsApp ссылка <code>tak://</code> сама по себе часто <strong>не открывает</strong> приложение. Используйте кнопки ниже или QR-код камерой телефона.</div>' +
+
+          '<h2>1. Установите приложение</h2>' +
+          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">Скачать PSS TAK (APK)</a>' +
           '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">OpenTAK ICU</a>' +
           '<a class="btn secondary" href="' + (d.field_kit || '/downloads/psr-field-kit.zip') + '">Комплект ATAK</a>' +
-          '<h2 style="font-size:1.05rem;margin:16px 0 8px">2. Сертификат и настройки</h2>' +
+
+          '<h2>2. Открыть enrollment</h2>' +
+          '<a class="btn big" id="btnPss" href="' + intentPss + '">Открыть в PSS TAK</a>' +
+          '<a class="btn big secondary" id="btnAtak" href="' + intentAtak + '">Открыть в ATAK CIV</a>' +
+          '<button type="button" class="btn secondary" id="btnOmni">Ещё раз (схема omnitak://)</button>' +
+          '<p class="muted">Если ничего не открылось — установите PSS TAK, затем снова нажмите кнопку. Либо отсканируйте QR камерой (не из браузера).</p>' +
+          '<img class="qr" alt="QR enrollment" src="' + qrImg + '" width="220" height="220" />' +
+
+          '<h2>3. Сертификат и настройки (если enrollment не сработал)</h2>' +
           '<a class="btn" href="' + (d.truststore || '/downloads/truststore-root.p12') + '">Скачать truststore-root.p12</a>' +
           '<a class="btn secondary" href="' + (d.atak_config || '/downloads/psr-atak-config.zip') + '">Настройки ATAK (zip)</a>' +
-          '<p class="muted">Пароль P12 при импорте: <strong>atakatak</strong></p>' +
-          '<h2 style="font-size:1.05rem;margin:16px 0 8px">3. Enrollment</h2>' +
-          '<a class="btn" href="' + data.qr_string + '">Открыть enrollment (PSS TAK / ATAK)</a>' +
-          '<p class="muted mono" style="margin-top:8px">' + data.qr_string + '</p>' +
-          '<h2 style="font-size:1.05rem;margin:16px 0 8px">Кратко</h2>' +
+          '<p class="muted">Пароль P12: <strong>atakatak</strong></p>' +
+
+          '<h2>Кратко</h2>' +
           '<ul class="muted">' +
-          '<li><strong>Основное:</strong> установите PSS TAK, нажмите enrollment, режим «Поисковик».</li>' +
-          '<li>ATAK CIV — опция (zip настроек выше), если штаб просит.</li>' +
+          '<li>Установите <strong>PSS TAK</strong> → кнопка «Открыть в PSS TAK».</li>' +
           '<li>Логин <strong>' + data.username + '</strong>, пароль учётки — от штаба отдельно.</li>' +
-          '<li>ICU: тот же логин/пароль OTS; путь стрима можно оставить psr.</li>' +
-          '</ul>';
+          '<li>ATAK CIV — опция (Play + zip), если штаб просит.</li>' +
+          '</ul>' +
+          '<details class="muted"><summary>Техническая ссылка</summary><p class="mono">' + tak.replace(/</g,'') + '</p></details>';
+
+        document.getElementById('btnPss').addEventListener('click', function (ev) {
+          ev.preventDefault();
+          openDeepLink(tak, PKG_PSS);
+        });
+        document.getElementById('btnAtak').addEventListener('click', function (ev) {
+          ev.preventDefault();
+          openDeepLink(tak, PKG_ATAK);
+        });
+        document.getElementById('btnOmni').addEventListener('click', function () {
+          openDeepLink(omni, PKG_PSS);
+        });
       } catch (e) {
         status.innerHTML = '<span class="err">Ошибка сети</span>';
       }
