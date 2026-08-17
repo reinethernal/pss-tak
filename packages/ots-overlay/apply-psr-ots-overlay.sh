@@ -15,10 +15,18 @@ install -m 644 "$ROOT/site-packages/blueprints/ots_api/mission_ops_api.py" "$SIT
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/search_sector_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_invite_api.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/blueprints/ots_api/mediamtx_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_field_auth.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"
+if [[ -f "$ROOT/site-packages/forms/MediaMTXPathConfig.py" ]]; then
+  install -d "$SITE_PKG/forms"
+  install -m 644 "$ROOT/site-packages/forms/MediaMTXPathConfig.py" "$SITE_PKG/forms/"
+fi
+if [[ -f "$ROOT/site-packages/models/VideoStream.py" ]]; then
+  install -m 644 "$ROOT/site-packages/models/VideoStream.py" "$SITE_PKG/models/"
+fi
 if [[ -f "$ROOT/site-packages/blueprints/scheduled_jobs.py" ]]; then
   install -m 644 "$ROOT/site-packages/blueprints/scheduled_jobs.py" "$SITE_PKG/blueprints/"
 fi
