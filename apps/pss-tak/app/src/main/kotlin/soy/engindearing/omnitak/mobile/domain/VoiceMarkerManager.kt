@@ -106,7 +106,8 @@ class VoiceMarkerManager(
         }
         val server = serverManager.servers.value.firstOrNull { it.enabled }
             ?: serverManager.servers.value.firstOrNull()
-        val host = server?.host ?: "fts.plasmadancer.ru"
+            ?: return PublishResult.Failed("No server — open the HQ invite link first")
+        val host = server.host
         val port = TakRestApiClient.SECURE_API_PORT
         val senderUrl = "https://$host:$port/Marti/sync/content?hash=$hash"
         val localFile = VoiceMarkerPackage.cacheFile(cacheDir, uid)

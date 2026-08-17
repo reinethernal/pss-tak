@@ -14,7 +14,7 @@
             android:title="@string/stream_protocol"
             android:dependency="stream_video"/>
         <EditTextPreference
-            android:defaultValue="fts.plasmadancer.ru"
+            android:defaultValue=""
             android:key="address"
             android:selectAllOnFocus="true"
             android:singleLine="true"
@@ -32,7 +32,7 @@
             android:key="path"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:defaultValue="psr"
+            android:defaultValue=""
             android:title="@string/stream_path"
             android:dependency="stream_video" />
         <EditTextPreference

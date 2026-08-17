@@ -2,7 +2,7 @@
 
 Полевой TAK-клиент для ПСР на базе [OmniTAK-Android](https://github.com/engindearing-projects/OmniTAK-Android) (Apache 2.0).
 
-Сервер по умолчанию при первом запуске: **fts.plasmadancer.ru:8089** (TLS). Нужна enroll логином OpenTAKServer.
+Сервер при первом запуске **не зашит**. Подключение — персональная ссылка штаба (enrollment QR / `tak://`).
 
 Контекст сервиса ПСР и список отличий от OmniTAK: [../../README.md](../../README.md), [../../SOURCES.md](../../SOURCES.md).
 

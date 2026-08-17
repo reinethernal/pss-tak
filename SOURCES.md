@@ -1,7 +1,7 @@
 # Источники и отличия от оригиналов
 
 Все клиенты здесь — **форки / производные** открытых проектов.  
-Цель правок: сразу работать с OpenTAKServer ПСР **`fts.plasmadancer.ru`**, без ручной возни с хостом при первом запуске.
+Цель правок: клиенты **без зашитого хоста**; подключение через персональную ссылку штаба (`tak://` / `opentakicu://`).
 
 ## Таблица upstream
 
@@ -22,7 +22,7 @@
 | Изменение | Зачем |
 |-----------|--------|
 | Имя приложения **«PSS TAK»**, описание под ПСР (`app_assets/.../strings.xml`) | Отличать сборку от стокового OmniTAK |
-| При пустом списке серверов в `ServerManager.hydrate()` добавляется сервер **ПСР**: `fts.plasmadancer.ru:8089`, TLS, `allowUntrustedTls` для первого enrollment | Первый запуск уже привязан к OTS; сертификат всё равно получается через enrollment |
+| При пустом списке серверов ничего не добавляется — подключение через invite (`tak://…/enroll?host=…`) | APK можно раздавать публично; сервер задаёт штаб ссылкой |
 | CI / monorepo layout (`apps/pss-tak`), артефакты APK | Сборка вместе с ICU и публикация в свой F-Droid |
 
 Функционально это тот же OmniTAK (карта, CoT, мессенджер, Meshtastic и т.д.) — без претензии заменить ATAK CIV по возможностям.
@@ -37,9 +37,9 @@
 
 | Изменение | Зачем |
 |-----------|--------|
-| Defaults хоста **`fts.plasmadancer.ru`** в `Preferences` и XML preference-экранах | Не вводить IP вручную |
-| Класс **`PsrServerDefaults`**: one-shot заполнение prefs (RTSP/CoT, SSL, пароль truststore), копирование CA из assets при наличии | Сразу RTSP/CoT на сервер ПСР |
-| Вызов `PsrServerDefaults.apply()` из `MainActivity` / `OnBoardingActivity` | Defaults применяются при старте |
+| Хост в Preferences / XML **пустой** по умолчанию | Не привязывать APK к одному OTS |
+| **`InviteConfig`**: `opentakicu://import` пишет RTSP/CoT и качает CA по `truststore_url` | Ссылка штаба (или кнопка из ПСР TAK) настраивает приложение |
+| `PsrServerDefaults` больше не заполняет хост | Нет baked-in сервера |
 | **`truststore-root.p12` в git не коммитится** (только на build-хосте / в assets при локальной сборке с CA) | Не светить CA в публичном репозитории |
 | Убраны Firebase / Crashlytics / `google-services.json` | Секрет Google API key утёк в git; аналитика для ПСР не нужна; CI собирается без файла |
 | Явные `versionCode` / `versionName` вместо git-tag плагина app-versioning | Плагин ломался в monorepo и отдавал пустой versionCode (ломало F-Droid) |

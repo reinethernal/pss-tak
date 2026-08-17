@@ -286,12 +286,14 @@ public class OnBoardingActivity extends AppIntro {
     private void handleIntentImport() {
         Uri data = getIntent().getData();
         if (data != null && "opentakicu".equals(data.getScheme())) {
+            InviteConfig.apply(this, data);
             String protocol = data.getQueryParameter(Preferences.STREAM_PROTOCOL);
             String address  = data.getQueryParameter(Preferences.STREAM_ADDRESS);
             String port     = data.getQueryParameter(Preferences.STREAM_PORT);
             String path     = data.getQueryParameter(Preferences.STREAM_PATH);
             String user     = data.getQueryParameter(Preferences.STREAM_USERNAME);
             String pass     = data.getQueryParameter(Preferences.STREAM_PASSWORD);
+            if (address == null) address = data.getQueryParameter("host");
 
             if (protocol != null || address != null || port != null || path != null || user != null || pass != null) {
                 StringBuilder msg = new StringBuilder();

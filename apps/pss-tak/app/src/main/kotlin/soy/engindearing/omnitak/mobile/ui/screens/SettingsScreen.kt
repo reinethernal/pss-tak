@@ -162,12 +162,47 @@ fun SettingsScreen(
                     .background(TacticalSurface)
                     .clickable {
                         val pkg = prefs.icuPackageId
+                        val server = app.serverManager.activeServer.value
+                            ?: app.serverManager.servers.value.firstOrNull { it.enabled }
+                            ?: app.serverManager.servers.value.firstOrNull()
+                        val installed = settingsCtx.packageManager.getLaunchIntentForPackage(pkg) != null
                         runCatching {
-                            val intent = settingsCtx.packageManager.getLaunchIntentForPackage(pkg)
-                                ?: android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                                    data = android.net.Uri.parse("https://fts.plasmadancer.ru/downloads/OpenTAK_ICU-PSR-latest.apk")
-                                }
-                            settingsCtx.startActivity(intent)
+                            if (installed && server != null) {
+                                val user = server.username.orEmpty()
+                                val host = server.host
+                                val uri = android.net.Uri.Builder()
+                                    .scheme("opentakicu")
+                                    .authority("import")
+                                    .appendQueryParameter("address", host)
+                                    .appendQueryParameter("port", "8554")
+                                    .appendQueryParameter("protocol", "rtsp")
+                                    .appendQueryParameter("path", user.ifBlank { "live" })
+                                    .appendQueryParameter("username", user)
+                                    .appendQueryParameter("atak_address", host)
+                                    .appendQueryParameter("atak_port", server.port.toString())
+                                    .appendQueryParameter(
+                                        "truststore_url",
+                                        "https://$host/downloads/truststore-root.p12",
+                                    )
+                                    .build()
+                                settingsCtx.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                        .setPackage(pkg),
+                                )
+                            } else if (installed) {
+                                settingsCtx.startActivity(
+                                    settingsCtx.packageManager.getLaunchIntentForPackage(pkg),
+                                )
+                            } else {
+                                val apk = server?.host?.let { "https://$it/downloads/OpenTAK_ICU-PSR-latest.apk" }
+                                    ?: "https://reinethernal.github.io/pss-tak/"
+                                settingsCtx.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(apk),
+                                    ),
+                                )
+                            }
                         }
                     }
                     .padding(horizontal = 16.dp, vertical = 16.dp),

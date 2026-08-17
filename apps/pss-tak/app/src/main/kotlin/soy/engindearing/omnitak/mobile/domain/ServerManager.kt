@@ -384,38 +384,17 @@ class ServerManager(
         store.servers.collect { loaded ->
             if (!initialized) {
                 // Cold-start: DataStore is the only source of truth.
-                // ПСР build: seed this OpenTAKServer when the list is empty so
-                // first launch is already bound to fts.plasmadancer.ru.
-                var seeded = loaded
-                if (seeded.isEmpty()) {
-                    val psr = TAKServer(
-                        name = "ПСР",
-                        host = "fts.plasmadancer.ru",
-                        port = 8089,
-                        protocol = "tls",
-                        useTLS = true,
-                        enabled = true,
-                        isDefault = true,
-                        // Enrollment still required; trust-all eases first CSR.
-                        allowUntrustedTls = true,
-                    )
-                    seeded = listOf(psr)
-                    store.saveServers(seeded)
-                    store.saveActiveServerId(psr.id)
-                }
-                _servers.value = seeded
-                if (seeded.isNotEmpty()) {
-                    initialized = true
-                    // Pick a sensible default-target ("active") server once. The
-                    // active server is just which one new DMs route to by default;
-                    // every enabled server is connected regardless.
+                // No baked-in host — first connect comes from the HQ invite link.
+                _servers.value = loaded
+                initialized = true
+                if (loaded.isNotEmpty()) {
                     val activeId = peekActiveId()
-                    val active = seeded.firstOrNull { it.id == activeId }
-                        ?: seeded.firstOrNull { it.enabled }
-                        ?: seeded.firstOrNull()
+                    val active = loaded.firstOrNull { it.id == activeId }
+                        ?: loaded.firstOrNull { it.enabled }
+                        ?: loaded.firstOrNull()
                     _activeServer.value = active
                 }
-                reconcileConnections(seeded)
+                reconcileConnections(loaded)
             } else {
                 // Post-init: in-memory _servers.value is authoritative for all
                 // server state (especially `enabled`). The async persist coroutines

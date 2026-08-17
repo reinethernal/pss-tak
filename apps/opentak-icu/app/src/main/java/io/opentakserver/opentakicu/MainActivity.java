@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Log.d(LOGTAG, "onCreate");
         PsrServerDefaults.apply(this);
+        InviteConfig.apply(this, getIntent().getData());
 
         Uri deepLinkData = getIntent().getData();
 
@@ -72,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
 
         Uri data = intent.getData();
+        if (data != null) {
+            InviteConfig.apply(this, data);
+        }
         if (data != null && "import".equals(data.getHost())) {
             Intent onboarding = new Intent(this, OnBoardingActivity.class);
             onboarding.setData(data);

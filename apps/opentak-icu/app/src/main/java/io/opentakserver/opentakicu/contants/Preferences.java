@@ -15,11 +15,11 @@ public class Preferences {
     public static final String STREAM_PROTOCOL = "protocol";
     public static final String STREAM_PROTOCOL_DEFAULT = "rtsp";
     public static final String STREAM_ADDRESS = "address";
-    public static final String STREAM_ADDRESS_DEFAULT = "fts.plasmadancer.ru";
+    public static final String STREAM_ADDRESS_DEFAULT = "";
     public static final String STREAM_PORT = "port";
     public static final String STREAM_PORT_DEFAULT = "8554";
     public static final String STREAM_PATH = "path";
-    public static final String STREAM_PATH_DEFAULT = "psr";
+    public static final String STREAM_PATH_DEFAULT = "";
     public static final String STREAM_USERNAME = "username";
     public static final String STREAM_USERNAME_DEFAULT = "";
     public static final String STREAM_PASSWORD = "password";
@@ -83,7 +83,7 @@ public class Preferences {
     public static final String ATAK_SEND_STREAM_DETAILS = "send_stream_details";
     public static final boolean ATAK_SEND_STREAM_DETAILS_DEFAULT = true;
     public static final String ATAK_SERVER_ADDRESS = "atak_address";
-    public static final String ATAK_SERVER_ADDRESS_DEFAULT = "fts.plasmadancer.ru";
+    public static final String ATAK_SERVER_ADDRESS_DEFAULT = "";
     public static final String ATAK_SERVER_PORT = "atak_port";
     public static final String ATAK_SERVER_PORT_DEFAULT = "8089";
     public static final String ATAK_SERVER_AUTHENTICATION = "atak_auth";
