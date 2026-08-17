@@ -21,8 +21,8 @@ android {
         applicationId = "ru.plasmadancer.psr.tak"
         minSdk = 26
         targetSdk = 35
-        versionCode = 113
-        versionName = "0.50.0"
+        versionCode = 114
+        versionName = "0.50.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -67,9 +67,40 @@ android {
                     ?: providers.gradleProperty("OMNITAK_KEY_PW").orNull
             }
         }
+        // Stable upload key = the machine debug.keystore (also injected in CI).
+        // Same cert as APKs already installed from fts.plasmadancer.ru.
+        create("psrUpload") {
+            val ks = System.getenv("PSR_UPLOAD_KEYSTORE")?.let { file(it) }
+                ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
+            if (ks.isFile) {
+                storeFile = ks
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("psr") {
+            dimension = "distribution"
+            isDefault = true
+            applicationId = "ru.plasmadancer.psr.tak"
+        }
+        create("compat") {
+            dimension = "distribution"
+            applicationId = "soy.engindearing.omnitak.mobile"
+        }
     }
 
     buildTypes {
+        getByName("debug") {
+            val upload = signingConfigs.findByName("psrUpload")
+            if (upload?.storeFile != null) {
+                signingConfig = upload
+            }
+        }
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -77,13 +108,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Bundles unstripped .so files into the AAB so Play Console can
-            // symbolicate native crashes without a separate symbols upload.
             ndk { debugSymbolLevel = "FULL" }
-            signingConfig = if (signingConfigs.getByName("release").storeFile != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            val upload = signingConfigs.findByName("psrUpload")
+            signingConfig = when {
+                signingConfigs.getByName("release").storeFile != null ->
+                    signingConfigs.getByName("release")
+                upload?.storeFile != null -> upload
+                else -> signingConfigs.getByName("debug")
             }
         }
     }

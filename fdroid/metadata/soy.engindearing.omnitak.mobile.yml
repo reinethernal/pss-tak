@@ -1,0 +1,19 @@
+Categories:
+  - Navigation
+  - Connectivity
+License: Apache-2.0
+AuthorName: ПСР / plasmadancer
+WebSite: https://github.com/reinethernal/pss-tak
+SourceCode: https://github.com/reinethernal/pss-tak
+IssueTracker: https://github.com/reinethernal/pss-tak/issues
+
+Name: PSR TAK (legacy)
+Summary: Обновление для soy.engindearing.omnitak.mobile
+Description: |
+  Тот же код, что «ПСР TAK», но package id как у старых установок
+  `soy.engindearing.omnitak.mobile` — чтобы F-Droid мог обновить поверх
+  ранее установленного OmniTAK/PSS TAK без переустановки.
+  Новым пользователям ставьте `ru.plasmadancer.psr.tak`.
+
+RepoType: git
+Repo: https://github.com/reinethernal/pss-tak.git

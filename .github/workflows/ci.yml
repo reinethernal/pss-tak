@@ -32,15 +32,25 @@ jobs:
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358"
       - run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Stable upload keystore (same cert as fts downloads)
+        env:
+          PSR_UPLOAD_KEYSTORE_B64: ${{ secrets.PSR_UPLOAD_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "${PSR_UPLOAD_KEYSTORE_B64:-}" || { echo "missing PSR_UPLOAD_KEYSTORE_B64 secret"; exit 1; }
+          bash ../../scripts/psr-upload-keystore.sh
+          echo "PSR_UPLOAD_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-      - name: assembleDebug
+      - name: assembleDebug (psr + legacy compat)
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assemblePsrDebug assembleCompatDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: apk-pss-tak
-          path: apps/pss-tak/app/build/outputs/apk/**/*.apk
+          path: |
+            apps/pss-tak/app/build/outputs/apk/psr/debug/*.apk
+            apps/pss-tak/app/build/outputs/apk/compat/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -66,15 +76,25 @@ jobs:
           yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
       - run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Stable upload keystore (same cert as fts downloads)
+        env:
+          PSR_UPLOAD_KEYSTORE_B64: ${{ secrets.PSR_UPLOAD_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "${PSR_UPLOAD_KEYSTORE_B64:-}" || { echo "missing PSR_UPLOAD_KEYSTORE_B64 secret"; exit 1; }
+          bash ../../scripts/psr-upload-keystore.sh
+          echo "PSR_UPLOAD_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-      - name: assembleDebug
+      - name: assembleDebug (psr + legacy compat)
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assemblePsrDebug assembleCompatDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: apk-opentak-icu
-          path: apps/opentak-icu/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            apps/opentak-icu/app/build/outputs/apk/psr/debug/*.apk
+            apps/opentak-icu/app/build/outputs/apk/compat/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -148,12 +168,15 @@ jobs:
           mkdir -p fdroid/repo/icons
           test -f fdroid/repo/icons/icon.png
           echo "$FDROID_REPO_KEYSTORE_B64" | base64 -d > fdroid/keystore.jks
-          # Copy latest APKs (rename clearly)
           find /tmp/apks -name '*.apk' -print
-          cp "$(find /tmp/apks/apk-pss-tak -name '*.apk' | head -1)" \
-            "fdroid/repo/pss-tak-$(git rev-parse --short HEAD).apk"
-          cp "$(find /tmp/apks/apk-opentak-icu -name '*.apk' | head -1)" \
-            "fdroid/repo/opentak-icu-$(git rev-parse --short HEAD).apk"
+          cp "$(find /tmp/apks/apk-pss-tak -path '*/psr/debug/*.apk' | head -1)" \
+            "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
+          cp "$(find /tmp/apks/apk-pss-tak -path '*/compat/debug/*.apk' | head -1)" \
+            "fdroid/repo/pss-tak-compat-$(git rev-parse --short HEAD).apk"
+          cp "$(find /tmp/apks/apk-opentak-icu -path '*/psr/debug/*.apk' | head -1)" \
+            "fdroid/repo/opentak-icu-psr-$(git rev-parse --short HEAD).apk"
+          cp "$(find /tmp/apks/apk-opentak-icu -path '*/compat/debug/*.apk' | head -1)" \
+            "fdroid/repo/opentak-icu-compat-$(git rev-parse --short HEAD).apk"
           cat > fdroid/config.yml <<EOF
           repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
           repo_name: ПСР

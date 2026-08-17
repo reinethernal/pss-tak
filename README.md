@@ -43,18 +43,29 @@
 - Fingerprint: `061cac831dec49c4c6dfd7c49f2d6f075e2bbbe4ca623e7765ed99a9187609c8`
 - Подробнее: [fdroid/README.md](fdroid/README.md)
 
-В репозитории два **отдельных** приложения: **ПСР TAK** и **ПСР Видео**.
+В репозитории **четыре** package id (два приложения × новый + legacy), чтобы F-Droid мог **обновить** уже установленные APK без переустановки:
+
+| packageId | Назначение |
+|-----------|------------|
+| `ru.plasmadancer.psr.tak` | ПСР TAK — новые установки |
+| `soy.engindearing.omnitak.mobile` | legacy TAK — обновление старого OmniTAK/PSS |
+| `ru.plasmadancer.psr.icu` | ПСР Видео — новые установки |
+| `io.opentakserver.opentakicu.debug` | legacy ICU — обновление старого OpenTAK ICU PSR |
+
+Все APK подписаны **одним upload-ключом** (тот же сертификат, что на `fts.plasmadancer.ru/downloads`).  
+Обновление возможно только при совпадении **package id + подпись + больший versionCode**.
 
 ## CI
 
-На **каждый push** собираются debug APK (`pss-tak` и `opentak-icu`) → Artifacts.  
-На push в `main` дополнительно обновляется F-Droid на GitHub Pages.
+На **каждый push** собираются debug APK (`assemblePsrDebug` + `assembleCompatDebug` для обоих приложений) → Artifacts.  
+На push в `main` дополнительно обновляется F-Droid на GitHub Pages (4 APK).  
+CI требует секрет `PSR_UPLOAD_KEYSTORE_B64` (base64 от `~/.android/debug.keystore` build-сервера).
 
 ## Локальная сборка
 
 ```bash
-cd apps/pss-tak && ./gradlew assembleDebug
-cd apps/opentak-icu && ./gradlew assembleDebug
+cd apps/pss-tak && ./gradlew assemblePsrDebug assembleCompatDebug
+cd apps/opentak-icu && ./gradlew assemblePsrDebug assembleCompatDebug
 ```
 
 JDK 17, Android SDK platform 35.

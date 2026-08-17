@@ -21,8 +21,8 @@ android {
         applicationId = "ru.plasmadancer.psr.icu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10710
-        versionName = "1.11.0-psr"
+        versionCode = 10711
+        versionName = "1.11.1-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,21 +42,47 @@ android {
                 storePassword = keystoreProperties["RELEASE_STORE_PASSWORD"] as String
             }
         }
+        create("psrUpload") {
+            val ks = System.getenv("PSR_UPLOAD_KEYSTORE")?.let { file(it) }
+                ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
+            if (ks.isFile) {
+                storeFile = ks
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("psr") {
+            dimension = "distribution"
+            isDefault = true
+            applicationId = "ru.plasmadancer.psr.icu"
+        }
+        create("compat") {
+            dimension = "distribution"
+            applicationId = "io.opentakserver.opentakicu.debug"
+        }
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            if (hasKeystore) {
-                signingConfig = signingConfigs.getByName("release")
+            when {
+                hasKeystore -> signingConfig = signingConfigs.getByName("release")
+                signingConfigs.getByName("psrUpload").storeFile != null ->
+                    signingConfig = signingConfigs.getByName("psrUpload")
             }
         }
 
         getByName("debug") {
-            // Same applicationId as release — F-Droid publishes this PSR build
-            // as a distinct app (ru.plasmadancer.psr.icu), not …icu.debug.
             isDebuggable = true
+            if (signingConfigs.getByName("psrUpload").storeFile != null) {
+                signingConfig = signingConfigs.getByName("psrUpload")
+            }
         }
     }
 

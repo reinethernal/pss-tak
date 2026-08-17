@@ -161,13 +161,20 @@ fun SettingsScreen(
                     .clip(RoundedCornerShape(12.dp))
                     .background(TacticalSurface)
                     .clickable {
-                        val pkg = prefs.icuPackageId
+                        val candidates = listOf(
+                            prefs.icuPackageId,
+                            "ru.plasmadancer.psr.icu",
+                            "io.opentakserver.opentakicu.debug",
+                            "io.opentakserver.opentakicu",
+                        ).distinct()
+                        val pkg = candidates.firstOrNull {
+                            settingsCtx.packageManager.getLaunchIntentForPackage(it) != null
+                        }
                         val server = app.serverManager.activeServer.value
                             ?: app.serverManager.servers.value.firstOrNull { it.enabled }
                             ?: app.serverManager.servers.value.firstOrNull()
-                        val installed = settingsCtx.packageManager.getLaunchIntentForPackage(pkg) != null
                         runCatching {
-                            if (installed && server != null) {
+                            if (pkg != null && server != null) {
                                 val user = server.username.orEmpty()
                                 val host = server.host
                                 val uri = android.net.Uri.Builder()
@@ -189,7 +196,7 @@ fun SettingsScreen(
                                     android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                         .setPackage(pkg),
                                 )
-                            } else if (installed) {
+                            } else if (pkg != null) {
                                 settingsCtx.startActivity(
                                     settingsCtx.packageManager.getLaunchIntentForPackage(pkg),
                                 )

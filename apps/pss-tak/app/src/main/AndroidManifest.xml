@@ -59,6 +59,8 @@
     <!-- Android 11+: allow detecting/launching companion video app -->
     <queries>
         <package android:name="ru.plasmadancer.psr.icu" />
+        <package android:name="io.opentakserver.opentakicu.debug" />
+        <package android:name="io.opentakserver.opentakicu" />
     </queries>
 
     <application
