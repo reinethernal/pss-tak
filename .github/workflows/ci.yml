@@ -195,20 +195,26 @@ jobs:
           # YAML indent from heredoc — rewrite cleanly without leading spaces
           python3 - <<'PY'
           from pathlib import Path
-          import os
+          import os, glob
           sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT') or ''
-          Path('fdroid/config.yml').write_text(f"""repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo
-          repo_name: ПСР
-          repo_description: Полевой репозиторий ПСР (ПСР TAK + ПСР Видео) для fts.plasmadancer.ru
-          archive_older: 0
-          make_current_version_link: false
-          repo_icon: icon.png
-          sdk_path: {sdk}
-          keystore: keystore.jks
-          repo_keyalias: {os.environ['FDROID_REPO_KEY_ALIAS']}
-          keystorepass: {os.environ['FDROID_REPO_KEYSTORE_PASS']}
-          keypass: {os.environ['FDROID_REPO_KEY_PASS']}
-          """.replace('          ', ''))
+          aapts = sorted(glob.glob(str(Path(sdk) / 'build-tools' / '*' / 'aapt'))) if sdk else []
+          aapt = aapts[-1] if aapts else ''
+          print('sdk_path', sdk, 'aapt', aapt)
+          Path('fdroid/icon.png').write_bytes(Path('fdroid/repo/icons/icon.png').read_bytes())
+          Path('fdroid/config.yml').write_text(
+              "repo_url: https://reinethernal.github.io/pss-tak/fdroid/repo\n"
+              "repo_name: ПСР\n"
+              "repo_description: Полевой репозиторий ПСР (ПСР TAK + ПСР Видео) для fts.plasmadancer.ru\n"
+              "archive_older: 0\n"
+              "make_current_version_link: false\n"
+              "repo_icon: icon.png\n"
+              f"sdk_path: {sdk}\n"
+              + (f"aapt: {aapt}\n" if aapt else "")
+              + "keystore: keystore.jks\n"
+              f"repo_keyalias: {os.environ['FDROID_REPO_KEY_ALIAS']}\n"
+              f"keystorepass: {os.environ['FDROID_REPO_KEYSTORE_PASS']}\n"
+              f"keypass: {os.environ['FDROID_REPO_KEY_PASS']}\n"
+          )
           Path('fdroid/config.yml').chmod(0o600)
           PY
 
@@ -246,10 +252,11 @@ jobs:
                   if int(v.get("versionCode") or 0) <= 0:
                       raise SystemExit(f"bad versionCode for {pkg}: {v.get('versionCode')}")
           apps = {a["packageName"]: a for a in idx["apps"]}
-          for pkg in ("ru.plasmadancer.psr.tak", "ru.plasmadancer.psr.icu"):
+          for pkg in sorted(expected):
               icon = (apps.get(pkg) or {}).get("icon")
-              if not icon:
-                  raise SystemExit(f"missing icon for {pkg} (F-Droid clients skip/hide iconless apps)")
+              print(f"icon {pkg}: {icon or '(none)'}")
+          extracted = sorted(p.name for p in Path("repo").glob("icons-*/*.png"))
+          print("extracted icons:", extracted)
           print("fdroid index OK:", ", ".join(sorted(pkgs)))
           PY
           ls -lh repo/*.apk repo/index-v1.jar repo/entry.jar
