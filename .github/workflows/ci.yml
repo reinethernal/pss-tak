@@ -203,7 +203,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/apks
-          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+          curl --retry 15 --retry-delay 8 --retry-all-errors -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
             > /tmp/artifacts.json
           python3 - <<'PY'
@@ -223,7 +224,8 @@ jobs:
               dest = Path("/tmp/apks") / name
               dest.mkdir(parents=True, exist_ok=True)
               subprocess.check_call([
-                  "curl", "-fsSL", "-H", f"Authorization: Bearer {token}",
+                  "curl", "--retry", "15", "--retry-delay", "8", "--retry-all-errors",
+                  "-fsSL", "-H", f"Authorization: Bearer {token}",
                   "-H", "Accept: application/vnd.github+json",
                   "-o", str(zpath),
                   f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts/{aid}/zip",
