@@ -21,8 +21,8 @@ android {
         applicationId = "ru.plasmadancer.psr.icu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10712
-        versionName = "1.11.2-psr"
+        versionCode = 10713
+        versionName = "1.11.3-psr"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -79,7 +79,8 @@ android {
         }
 
         getByName("debug") {
-            isDebuggable = true
+            // CI publishes this variant to F-Droid; keep it installable (not debuggable).
+            isDebuggable = System.getenv("CI").isNullOrEmpty()
             if (signingConfigs.getByName("psrUpload").storeFile != null) {
                 signingConfig = signingConfigs.getByName("psrUpload")
             }

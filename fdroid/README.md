@@ -19,3 +19,5 @@
 Все четыре APK подписаны **одним upload-ключом** (тот же сертификат, что APK на `fts.plasmadancer.ru/downloads`).
 
 CI: `assemblePsrDebug` + `assembleCompatDebug` → `fdroid update --delete-unknown` → GitHub Pages.
+
+В `repo/` не должно быть ничего кроме APK (никаких `.gitkeep`): F-Droid индексирует посторонние файлы как фейковые пакеты и клиент **не обновляет репозиторий**.

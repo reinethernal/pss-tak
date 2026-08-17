@@ -53,11 +53,13 @@ app/src/main/jniLibs/
 # Agent worktrees
 .claude/worktrees/
 
-# F-Droid local/CI secrets (never commit)
+# F-Droid local/CI secrets and generated repo files (never commit)
 fdroid/keystore.jks
 fdroid/keystore.p12
-fdroid/repo/*.apk
-fdroid/repo/index*
+fdroid/repo/*
+fdroid/repo/.*
+!fdroid/repo/icons/
+!fdroid/repo/icons/icon.png
 fdroid/tmp/
 
 # Firebase / Google API keys (never commit)

@@ -168,6 +168,10 @@ jobs:
           mkdir -p fdroid/repo/icons
           test -f fdroid/repo/icons/icon.png
           echo "$FDROID_REPO_KEYSTORE_B64" | base64 -d > fdroid/keystore.jks
+          # Non-APK files in repo/ (e.g. .gitkeep) are indexed as fake packages;
+          # F-Droid then aborts refresh because the package name is invalid.
+          rm -f fdroid/repo/.gitkeep
+          find fdroid/repo -maxdepth 1 -type f ! -name '*.apk' -delete || true
           find /tmp/apks -name '*.apk' -print
           cp "$(find /tmp/apks/apk-pss-tak -path '*/psr/debug/*.apk' | head -1)" \
             "fdroid/repo/pss-tak-psr-$(git rev-parse --short HEAD).apk"
@@ -212,9 +216,43 @@ jobs:
         working-directory: fdroid
         run: |
           set -euo pipefail
-          fdroid update --create-metadata --pretty --delete-unknown
-          test -f repo/index-v1.json -o -f repo/index.xml
-          ls -lh repo/
+          fdroid update --pretty --delete-unknown
+          test -f repo/index-v1.jar
+          test -f repo/index-v1.json
+          test -f repo/index-v2.json
+          test -f repo/entry.jar
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          expected = {
+              "io.opentakserver.opentakicu.debug",
+              "ru.plasmadancer.psr.icu",
+              "ru.plasmadancer.psr.tak",
+              "soy.engindearing.omnitak.mobile",
+          }
+          idx = json.loads(Path("repo/index-v1.json").read_text())
+          pkgs = set(idx["packages"])
+          if pkgs != expected:
+              raise SystemExit(f"unexpected F-Droid packages: {sorted(pkgs)}")
+          for pkg, vers in idx["packages"].items():
+              if not vers:
+                  raise SystemExit(f"no APK for {pkg}")
+              for v in vers:
+                  name = v.get("apkName") or ""
+                  if not name.endswith(".apk"):
+                      raise SystemExit(f"non-APK indexed for {pkg}: {name!r}")
+                  if not v.get("signer"):
+                      raise SystemExit(f"missing signer for {pkg}")
+                  if int(v.get("versionCode") or 0) <= 0:
+                      raise SystemExit(f"bad versionCode for {pkg}: {v.get('versionCode')}")
+          apps = {a["packageName"]: a for a in idx["apps"]}
+          for pkg in ("ru.plasmadancer.psr.tak", "ru.plasmadancer.psr.icu"):
+              icon = (apps.get(pkg) or {}).get("icon")
+              if not icon:
+                  raise SystemExit(f"missing icon for {pkg} (F-Droid clients skip/hide iconless apps)")
+          print("fdroid index OK:", ", ".join(sorted(pkgs)))
+          PY
+          ls -lh repo/*.apk repo/index-v1.jar repo/entry.jar
 
       - name: Assemble Pages site
         run: |
@@ -225,6 +263,8 @@ jobs:
           cp fdroid/site/repo-qr.png _site/repo-qr.png
           # also expose README
           cp fdroid/README.md _site/fdroid/README.md || true
+          # GitHub Pages must not run Jekyll (it would skip .jar / ignore some binaries).
+          touch _site/.nojekyll
 
       - name: Deploy to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v4

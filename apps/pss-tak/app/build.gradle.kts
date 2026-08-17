@@ -100,6 +100,8 @@ android {
             if (upload?.storeFile != null) {
                 signingConfig = upload
             }
+            // CI publishes this variant to F-Droid; keep it installable (not debuggable).
+            isDebuggable = System.getenv("CI").isNullOrEmpty()
         }
         getByName("release") {
             isMinifyEnabled = true
