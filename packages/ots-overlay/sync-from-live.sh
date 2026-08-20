@@ -26,6 +26,8 @@ cp -a "$SITE_PKG/models/VideoStream.py" "$ROOT/site-packages/models/"
 cp -a "$SITE_PKG/blueprints/scheduled_jobs.py" "$ROOT/site-packages/blueprints/"
 cp -a "$WWW/assets/js/psr-map-ext.js" "$ROOT/www/assets/js/"
 [[ -f "$WWW/assets/js/psr-hq-nav.js" ]] && cp -a "$WWW/assets/js/psr-hq-nav.js" "$ROOT/www/assets/js/"
+CUR=$(ls "$WWW/assets/js"/DefaultLayout-*.js 2>/dev/null | head -1 || true)
+[[ -n "${CUR:-}" ]] && cp -a "$CUR" "$ROOT/www/assets/js/"
 [[ -f "$WWW/assets/js/Map-CpwYNoVG.js" ]] && cp -a "$WWW/assets/js/Map-CpwYNoVG.js" "$ROOT/www/assets/js/"
 [[ -f "$WWW/assets/js/Users-CVA3KzTZ.js" ]] && cp -a "$WWW/assets/js/Users-CVA3KzTZ.js" "$ROOT/www/assets/js/"
 [[ -f "$WWW/assets/js/ClientApps-psr.js" ]] && cp -a "$WWW/assets/js/ClientApps-psr.js" "$ROOT/www/assets/js/"

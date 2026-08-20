@@ -440,6 +440,7 @@ API: `POST /api/psr/invite` (admin), публичная страница `GET /a
 |-----|-----------|
 | Публичная форма | https://fts.plasmadancer.ru/downloads/psr-report.html |
 | Очередь / карточка | https://fts.plasmadancer.ru/downloads/psr-crm.html |
+| Пункт меню штаба | Боковая панель → **Обращения** |
 | Создать/привязать операцию | из карточки дела → `psr-operation.html` |
 | Отчёт CSV | `GET /api/crm/reports/cases.csv` (commander+) |
 | Сводка JSON | `GET /api/crm/reports/summary` |

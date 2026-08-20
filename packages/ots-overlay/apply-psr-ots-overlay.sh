@@ -38,6 +38,20 @@ echo "==> Web assets / downloads"
 install -d "$WWW/assets/js" "$WWW/downloads"
 install -m 644 "$ROOT/www/assets/js/psr-map-ext.js" "$WWW/assets/js/"
 [[ -f "$ROOT/www/assets/js/psr-hq-nav.js" ]] && install -m 644 "$ROOT/www/assets/js/psr-hq-nav.js" "$WWW/assets/js/"
+# Sidebar «Обращения» (hash may change on UI upgrade)
+DL=$(ls "$ROOT/www/assets/js"/DefaultLayout-*.js 2>/dev/null | head -1 || true)
+if [[ -n "${DL:-}" ]]; then
+  base=$(basename "$DL")
+  if [[ -f "$WWW/assets/js/$base" ]]; then
+    install -m 644 "$DL" "$WWW/assets/js/$base"
+    echo "    $base restored (Обращения menu)"
+  else
+    CUR=$(ls "$WWW/assets/js"/DefaultLayout-*.js 2>/dev/null | head -1 || true)
+    if [[ -n "${CUR:-}" ]]; then
+      echo "WARN: DefaultLayout is $(basename "$CUR") — re-apply Обращения patch manually"
+    fi
+  fi
+fi
 for f in Users-CVA3KzTZ.js ClientApps-psr.js; do
   [[ -f "$ROOT/www/assets/js/$f" ]] && install -m 644 "$ROOT/www/assets/js/$f" "$WWW/assets/js/"
 done
