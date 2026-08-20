@@ -116,4 +116,21 @@ chown www-data:www-data "$WWW/assets/js/psr-map-ext.js" \
   "$WWW/downloads/psr-crm.html" \
   "$WWW/downloads/psr-report.html" 2>/dev/null || true
 
+
+# ПСС brand icons / favicons
+if [[ -d "$ROOT/www/assets/pss-brand" ]]; then
+  install -d "$WWW/assets/pss-brand"
+  cp -a "$ROOT/www/assets/pss-brand/." "$WWW/assets/pss-brand/"
+  if [[ -f "$ROOT/www/assets/pss-brand/app/favicon.ico" ]]; then
+    install -m 644 "$ROOT/www/assets/pss-brand/app/favicon.ico" "$WWW/favicon.ico"
+    install -m 644 "$ROOT/www/assets/pss-brand/app/icon-16.png" "$WWW/favicon-16x16.png"
+    install -m 644 "$ROOT/www/assets/pss-brand/app/icon-32.png" "$WWW/favicon-32x32.png"
+    install -m 644 "$ROOT/www/assets/pss-brand/app/icon-180.png" "$WWW/apple-touch-icon.png"
+    install -m 644 "$ROOT/www/assets/pss-brand/app/icon-192.png" "$WWW/android-chrome-192x192.png"
+    install -m 644 "$ROOT/www/assets/pss-brand/app/icon-512.png" "$WWW/android-chrome-512x512.png"
+  fi
+  chown -R www-data:www-data "$WWW/assets/pss-brand" 2>/dev/null || true
+  echo "    pss-brand icons applied"
+fi
+
 echo "OK: overlay applied. Restart: systemctl restart opentakserver cot_parser"

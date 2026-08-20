@@ -36,3 +36,5 @@ for f in psr-operation.html psr-sectors.html psr-start.txt psr-invite.html psr-i
   [[ -f "$WWW/downloads/$f" ]] && cp -a "$WWW/downloads/$f" "$ROOT/www/downloads/"
 done
 echo "OK: synced live → $ROOT"
+
+[[ -d "$WWW/assets/pss-brand" ]] && mkdir -p "$ROOT/www/assets/pss-brand" && cp -a "$WWW/assets/pss-brand/." "$ROOT/www/assets/pss-brand/"

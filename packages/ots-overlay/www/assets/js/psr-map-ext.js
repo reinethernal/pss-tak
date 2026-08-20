@@ -840,7 +840,9 @@
     panelOpen = !!open;
     if (panel) panel.style.display = panelOpen ? "block" : "none";
     if (toggleBtn) {
-      toggleBtn.textContent = panelOpen ? "✕ ПСС" : "ПСС";
+      toggleBtn.innerHTML = panelOpen
+        ? "✕ ПСС"
+        : '<img src="/assets/pss-brand/ui/map-24.png" alt="" width="20" height="20" style="vertical-align:-4px;margin-right:6px;border-radius:4px" />ПСС';
       toggleBtn.setAttribute("aria-expanded", panelOpen ? "true" : "false");
     }
   }
@@ -858,7 +860,8 @@
     toggleBtn = document.createElement("button");
     toggleBtn.id = "psr-hq-toggle";
     toggleBtn.type = "button";
-    toggleBtn.textContent = "ПСС";
+    toggleBtn.innerHTML =
+      '<img src="/assets/pss-brand/ui/map-24.png" alt="" width="20" height="20" style="vertical-align:-4px;margin-right:6px;border-radius:4px" />ПСС';
     toggleBtn.title = "Панель секторов и точек ПСС";
     toggleBtn.setAttribute("aria-expanded", "false");
     // Below Mantine AppShell overlays (~200–300 navbar, ~1000 drawer/modal)
