@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ПСР — обращения (CRM)</title>
+  <style>
+    :root { --bg:#1a1a1a; --card:#252525; --line:#444; --acc:#2a6; --txt:#eee; --mut:#aaa; --warn:#c90; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--txt); }
+    header { padding:14px 18px; background:#222; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    header h1 { margin:0; font-size:1.2rem; }
+    a { color:#8cf; }
+    .wrap { max-width:1200px; margin:0 auto; padding:16px; display:grid; grid-template-columns: 1fr 1.2fr; gap:16px; }
+    @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+    select, input, textarea, button { padding:8px 10px; border-radius:6px; border:1px solid var(--line); background:#333; color:var(--txt); }
+    button { cursor:pointer; }
+    button.primary { background:var(--acc); border-color:var(--acc); font-weight:600; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:8px; cursor:pointer; }
+    .card.active { border-color:var(--acc); }
+    .muted { color:var(--mut); font-size:13px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#333; border:1px solid var(--line); font-size:12px; }
+    .badge.new, .badge.triage { border-color:var(--warn); color:#fc6; }
+    .badge.active { border-color:var(--acc); color:#6c6; }
+    .badge.closed, .badge.false_alarm { opacity:.7; }
+    label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
+    .field { margin-bottom:10px; }
+    .field input, .field textarea, .field select { width:100%; }
+    .tabs button.active { background:var(--acc); border-color:var(--acc); }
+    #status { min-height:1.2em; }
+    .hist { font-size:13px; border-left:2px solid var(--line); padding-left:10px; margin:6px 0; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Обращения ПСР</h1>
+    <a href="/map">← Карта</a>
+    <a href="/downloads/psr-operation.html">Операция</a>
+    <a href="/downloads/psr-report.html" target="_blank">Публичная форма</a>
+    <span id="who" class="muted"></span>
+  </header>
+  <div class="wrap">
+    <div>
+      <div class="row">
+        <select id="f-status">
+          <option value="">Все статусы</option>
+          <option>new</option><option>triage</option><option>active</option>
+          <option>suspended</option><option>closed</option><option>false_alarm</option>
+        </select>
+        <input id="f-q" placeholder="Поиск…" />
+        <button type="button" id="reload">Обновить</button>
+        <button type="button" class="primary write-only" id="new-case">+ Дело</button>
+        <button type="button" class="cmd-only" id="dl-csv">CSV</button>
+      </div>
+      <div id="list"></div>
+      <div id="contacts-panel" class="hidden">
+        <h3>Справочник контактов</h3>
+        <div class="row">
+          <input id="c-q" placeholder="Фильтр контактов" />
+          <button type="button" id="c-reload">Обновить</button>
+        </div>
+        <div id="contacts"></div>
+      </div>
+      <div class="row tabs">
+        <button type="button" class="active" data-panel="cases">Очередь</button>
+        <button type="button" data-panel="contacts">Контакты</button>
+        <button type="button" class="cmd-only" data-panel="report">Отчёт</button>
+      </div>
+      <div id="report-panel" class="hidden card" style="cursor:default"></div>
+    </div>
+    <div>
+      <div id="status" class="muted"></div>
+      <div id="detail" class="muted">Выберите дело слева</div>
+    </div>
+  </div>
+<script>
+const $ = (id) => document.getElementById(id);
+let me = { can_write:false, can_command:false, can_reports:false, username:'' };
+let selectedId = null;
+let cases = [];
+
+function csrfHeaders() {
+  const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  const h = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+  if (m) h['X-XSRF-TOKEN'] = decodeURIComponent(m[1]);
+  return h;
+}
+async function api(path, opts={}) {
+  const r = await fetch(path, {
+    credentials: 'same-origin',
+    headers: csrfHeaders(),
+    ...opts,
+    headers: { ...csrfHeaders(), ...(opts.headers||{}) },
+  });
+  if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname); throw new Error('auth'); }
+  const ct = r.headers.get('content-type') || '';
+  if (ct.includes('text/csv')) return r;
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.success === false) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+function setStatus(t) { $('status').textContent = t || ''; }
+function applyAcl() {
+  document.querySelectorAll('.write-only').forEach(el => { el.disabled = !me.can_write; el.classList.toggle('hidden', !me.can_write); });
+  document.querySelectorAll('.cmd-only').forEach(el => { el.disabled = !me.can_command && !me.can_reports; el.classList.toggle('hidden', !(me.can_command || me.can_reports)); });
+}
+async function loadMe() {
+  const j = await api('/api/crm/me');
+  me = j;
+  $('who').textContent = `${j.username} · ${(j.hq_roles||j.roles||[]).join(', ') || 'нет HQ-роли'}`;
+  applyAcl();
+  if (!j.can_read) {
+    $('detail').textContent = 'Нет доступа к CRM. Нужна роль psr_dispatcher / commander / observer / admin.';
+    throw new Error('no crm');
+  }
+}
+function badge(st) { return `<span class="badge ${st||''}">${st||'?'}</span>`; }
+function renderList() {
+  const box = $('list');
+  box.innerHTML = cases.map(c => `
+    <div class="card ${c.id===selectedId?'active':''}" data-id="${c.id}">
+      <div class="row" style="justify-content:space-between;margin:0">
+        <strong>${c.case_number}</strong> ${badge(c.status)}
+      </div>
+      <div>${c.title || c.missing_name || '—'}</div>
+      <div class="muted">${c.assigned_username || 'не назначен'} · ${c.reporter_phone || ''}</div>
+    </div>`).join('') || '<div class="muted">Пусто</div>';
+  box.querySelectorAll('.card').forEach(el => el.onclick = () => openCase(+el.dataset.id));
+}
+async function loadCases() {
+  const st = $('f-status').value;
+  const q = $('f-q').value.trim();
+  const qs = new URLSearchParams();
+  if (st) qs.set('status', st);
+  if (q) qs.set('q', q);
+  const j = await api('/api/crm/cases?' + qs.toString());
+  cases = j.results || [];
+  renderList();
+}
+async function openCase(id) {
+  selectedId = id;
+  renderList();
+  const j = await api('/api/crm/cases/' + id);
+  const c = j.result;
+  const events = j.events || [];
+  const contacts = j.contacts || [];
+  const ro = !me.can_write;
+  $('detail').innerHTML = `
+    <div class="card" style="cursor:default">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">${c.case_number}</h2> ${badge(c.status)}
+      </div>
+      <div class="field"><label>Заголовок</label><input id="d-title" value="${esc(c.title||'')}" ${ro?'disabled':''}/></div>
+      <div class="row">
+        <div class="field" style="flex:1"><label>Статус</label>
+          <select id="d-status" ${ro?'disabled':''}>${opts(['new','triage','active','suspended','closed','false_alarm'], c.status)}</select>
+        </div>
+        <div class="field" style="flex:1"><label>Приоритет</label>
+          <select id="d-priority" ${ro?'disabled':''}>${opts(['low','normal','high','critical'], c.priority)}</select>
+        </div>
+      </div>
+      <div class="field"><label>Пропавший</label><input id="d-missing" value="${esc(c.missing_name||'')}" ${ro?'disabled':''}/></div>
+      <div class="row">
+        <div class="field" style="flex:1"><label>Возраст</label><input id="d-age" value="${esc(c.missing_age||'')}" ${ro?'disabled':''}/></div>
+        <div class="field" style="flex:1"><label>Пол</label><input id="d-sex" value="${esc(c.missing_sex||'')}" ${ro?'disabled':''}/></div>
+      </div>
+      <div class="field"><label>LKP / место</label><input id="d-place" value="${esc(c.last_seen_place||'')}" ${ro?'disabled':''}/></div>
+      <div class="field"><label>Приметы / одежда</label><textarea id="d-appearance" rows="3" ${ro?'disabled':''}>${esc(c.appearance||c.clothing||'')}</textarea></div>
+      <div class="field"><label>Сводка</label><textarea id="d-summary" rows="3" ${ro?'disabled':''}>${esc(c.summary||'')}</textarea></div>
+      <div class="field"><label>Заявитель / телефон</label>
+        <input id="d-reporter" value="${esc((c.reporter_name||'')+' / '+(c.reporter_phone||''))}" disabled/></div>
+      <div class="field"><label>Операция</label>
+        <div class="row">
+          <input id="d-mission" value="${esc(c.mission_name||'')}" ${ro?'disabled':''} style="flex:1"/>
+          ${c.mission_name?`<a href="/downloads/psr-operation.html?mission=${encodeURIComponent(c.mission_name)}">Открыть</a>`:''}
+        </div>
+      </div>
+      <div class="row write-only">
+        <button type="button" class="primary" id="d-save">Сохранить</button>
+        <input id="d-assign" placeholder="логин диспетчера" value="${esc(c.assigned_username||me.username||'')}"/>
+        <button type="button" id="d-do-assign">Назначить</button>
+      </div>
+      <div class="row cmd-only">
+        <button type="button" class="primary" id="d-create-mission">Создать операцию</button>
+        <button type="button" id="d-link-mission">Привязать операцию</button>
+      </div>
+      <div class="field write-only"><label>Комментарий</label>
+        <div class="row">
+          <input id="d-comment" placeholder="Заметка в историю" style="flex:1"/>
+          <button type="button" id="d-add-event">Добавить</button>
+        </div>
+      </div>
+      <h3>Контакты дела</h3>
+      <div>${contacts.map(x => `<div class="muted">#${x.contact_id} ${x.role_in_case}: ${(x.contact&&x.contact.full_name)||''} ${(x.contact&&x.contact.phones)||''}</div>`).join('') || '<div class="muted">—</div>'}</div>
+      <h3>История</h3>
+      <div>${events.map(e => `<div class="hist"><strong>${e.event_type}</strong> · ${e.created_by||''}<br>${esc(e.body||'')}<div class="muted">${e.created||''}</div></div>`).join('')}</div>
+    </div>`;
+  applyAcl();
+  if (me.can_write) {
+    $('d-save').onclick = saveCase;
+    $('d-do-assign').onclick = assignCase;
+    $('d-add-event').onclick = addEvent;
+  }
+  if (me.can_command) {
+    $('d-create-mission').onclick = createMission;
+    $('d-link-mission').onclick = linkMission;
+  }
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function opts(list, cur){ return list.map(v => `<option ${v===cur?'selected':''}>${v}</option>`).join(''); }
+async function saveCase() {
+  try {
+    setStatus('Сохранение…');
+    await api('/api/crm/cases/'+selectedId, { method:'PUT', body: JSON.stringify({
+      title: $('d-title').value,
+      status: $('d-status').value,
+      priority: $('d-priority').value,
+      missing_name: $('d-missing').value,
+      missing_age: $('d-age').value,
+      missing_sex: $('d-sex').value,
+      last_seen_place: $('d-place').value,
+      appearance: $('d-appearance').value,
+      summary: $('d-summary').value,
+      mission_name: $('d-mission').value || null,
+      closed_reason: $('d-status').value==='closed' ? 'manual' : null,
+    })});
+    await loadCases(); await openCase(selectedId); setStatus('Сохранено');
+  } catch(e){ setStatus(e.message); }
+}
+async function assignCase() {
+  try {
+    await api('/api/crm/cases/'+selectedId+'/assign', { method:'POST', body: JSON.stringify({ username: $('d-assign').value.trim() })});
+    await loadCases(); await openCase(selectedId); setStatus('Назначено');
+  } catch(e){ setStatus(e.message); }
+}
+async function addEvent() {
+  try {
+    await api('/api/crm/cases/'+selectedId+'/events', { method:'POST', body: JSON.stringify({ event_type:'comment', body: $('d-comment').value })});
+    await openCase(selectedId); setStatus('Комментарий добавлен');
+  } catch(e){ setStatus(e.message); }
+}
+async function createMission() {
+  try {
+    setStatus('Создание операции…');
+    const j = await api('/api/crm/cases/'+selectedId+'/create_mission', { method:'POST', body: '{}' });
+    await loadCases(); await openCase(selectedId);
+    setStatus('Операция: '+j.mission_name);
+    if (j.operation_url) location.href = j.operation_url;
+  } catch(e){ setStatus(e.message); }
+}
+async function linkMission() {
+  const name = $('d-mission').value.trim();
+  if (!name) return setStatus('Укажите имя операции');
+  try {
+    await api('/api/crm/cases/'+selectedId+'/link_mission', { method:'POST', body: JSON.stringify({ mission_name: name })});
+    await openCase(selectedId); setStatus('Привязано');
+  } catch(e){ setStatus(e.message); }
+}
+async function newCase() {
+  const title = prompt('Краткое название дела / ФИО пропавшего');
+  if (!title) return;
+  try {
+    const j = await api('/api/crm/cases', { method:'POST', body: JSON.stringify({ title, missing_name: title, source:'phone' })});
+    await loadCases(); await openCase(j.result.id);
+  } catch(e){ setStatus(e.message); }
+}
+async function loadContacts() {
+  const q = $('c-q').value.trim();
+  const j = await api('/api/crm/contacts'+(q?('?q='+encodeURIComponent(q)):''));
+  $('contacts').innerHTML = (j.results||[]).map(c =>
+    `<div class="card" style="cursor:default"><strong>${esc(c.full_name)}</strong> · ${esc(c.phones||'')}<div class="muted">${esc(c.default_role||'')} ${esc(c.notes||'')}</div></div>`
+  ).join('') || '<div class="muted">Пусто</div>';
+}
+async function loadReport() {
+  if (!me.can_reports) return;
+  const j = await api('/api/crm/reports/summary');
+  $('report-panel').innerHTML = `
+    <h3>Сводка</h3>
+    <div>Всего: ${j.total} · Открытых: ${j.open_count}</div>
+    <div>По статусам: ${JSON.stringify(j.by_status)}</div>
+    <div>Нагрузка: ${JSON.stringify(j.by_dispatcher)}</div>
+    <div>Ср. время первой реакции: ${j.avg_first_response_seconds!=null ? Math.round(j.avg_first_response_seconds)+' с' : '—'}</div>
+    <div class="row"><a href="/api/crm/reports/cases.csv">Скачать CSV</a></div>`;
+}
+document.querySelectorAll('.tabs button').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const p = btn.dataset.panel;
+  $('list').classList.toggle('hidden', p!=='cases');
+  $('contacts-panel').classList.toggle('hidden', p!=='contacts');
+  $('report-panel').classList.toggle('hidden', p!=='report');
+  if (p==='contacts') loadContacts();
+  if (p==='report') loadReport();
+});
+$('reload').onclick = () => loadCases().catch(e => setStatus(e.message));
+$('f-status').onchange = () => loadCases();
+$('f-q').onchange = () => loadCases();
+$('new-case').onclick = newCase;
+$('c-reload').onclick = loadContacts;
+$('dl-csv').onclick = () => { location.href = '/api/crm/reports/cases.csv'; };
+
+(async () => {
+  try {
+    await loadMe();
+    await loadCases();
+  } catch(e) { setStatus(e.message); }
+})();
+</script>
+</body>
+</html>

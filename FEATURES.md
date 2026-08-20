@@ -28,13 +28,14 @@
 
 | Кто | Чем |
 |-----|-----|
-| Штаб / командир | Сайт в браузере (`/map`, `/downloads/psr-operation.html`) |
+| Штаб / командир | Сайт (`/map`, `psr-operation.html`, `psr-crm.html`) |
 | Поисковики, кинологи, медики, водители, БПЛА | **ПСР TAK** (основной полевой клиент) |
 | Старший группы / полевой КП | **ПСР TAK** в режиме «Старший» или «Полевой штаб» |
 | Наблюдатель / стажёр | ПСР TAK read-only / `MISSION_READ_ONLY` |
 | Опытный оператор / спец. плагины | **ATAK CIV** (опция, не обязателен) |
 | Кому нужно показать видео с места | **ПСР TAK → Трансляция** (камера встроена; ПСР Видео — опция USB/экран) |
-| Семья / свидетель без приложения | Пока нет (SMS-гео — B4) |
+| Семья / свидетель без приложения | Публичная форма [psr-report.html](https://fts.plasmadancer.ru/downloads/psr-report.html) → очередь CRM |
+| Диспетчер / командир штаба | [psr-crm.html](https://fts.plasmadancer.ru/downloads/psr-crm.html) + роли `psr_*` |
 
 ---
 
@@ -428,3 +429,65 @@ API: `POST /api/psr/invite` (admin), публичная страница `GET /a
 | Truststore P12 | https://fts.plasmadancer.ru/downloads/truststore-root.p12 |
 
 Также: [страница с QR](https://reinethernal.github.io/pss-tak/) или «Приложения для телефонов» на сайте.
+
+---
+
+## Обращения (CRM)
+
+Цепочка: гражданин → публичная форма → очередь штаба → операция → поле.
+
+| Что | URL / API |
+|-----|-----------|
+| Публичная форма | https://fts.plasmadancer.ru/downloads/psr-report.html |
+| Очередь / карточка | https://fts.plasmadancer.ru/downloads/psr-crm.html |
+| Создать/привязать операцию | из карточки дела → `psr-operation.html` |
+| Отчёт CSV | `GET /api/crm/reports/cases.csv` (commander+) |
+| Сводка JSON | `GET /api/crm/reports/summary` |
+
+Статусы дела: `new` → `triage` → `active` → `closed` / `false_alarm` / `suspended`.
+
+---
+
+## Роли штаба (HQ ACL)
+
+| Роль | Права |
+|------|--------|
+| `psr_admin` | всё + invite / назначение HQ-ролей |
+| `psr_commander` | CRM, создание операций, назначения, отчёты |
+| `psr_dispatcher` | очередь CRM, карта, задания/сектора |
+| `psr_observer` | только чтение CRM / карта / операция |
+| `administrator` | полный доступ OTS (как раньше) |
+
+Как выдать диспетчеру доступ:
+
+1. Создать пользователя в «Пользователи».
+2. Войти как `administrator` / `psr_admin`.
+3. `POST /api/crm/hq/roles/bootstrap` (один раз — создаёт роли в БД).
+4. `POST /api/crm/hq/assign_role` с телом `{"username":"…","role":"psr_dispatcher"}`.
+5. Добавить в группы IN/OUT (`psr_shtab` и нужные полевые).
+6. Открыть https://fts.plasmadancer.ru/downloads/psr-crm.html
+
+Invite: `POST /api/psr/invite` доступен `administrator` и `psr_admin`.
+
+---
+
+## Проверено на fts (smoke)
+
+Дата прохода: 2026-08-20. Хост: `fts.plasmadancer.ru`.
+
+| Контур | Статус | Заметка |
+|--------|--------|---------|
+| Сервисы `opentakserver` / `cot_parser` / `mediamtx` | OK | active |
+| Downloads APK / invite / operation HTML | OK | HTTP 200 |
+| Truststore P12 | OK | был 403 → chmod 644 |
+| Invite bad token → 400 | OK | |
+| `/api/missions`, sectors, tracks без сессии | OK | 302 login |
+| Video path `record` default true (overlay) | OK | mediamtx + VideoStream |
+| CRM public `POST /api/crm/public/report` | OK | после apply |
+| CRM HQ list/create/assign/create_mission | OK | после apply |
+| Reports summary + CSV | OK | после apply |
+| HQ roles bootstrap + assign | OK | после apply |
+| Observer write denied на mission_ops/sectors | OK | after_request guard |
+| Overlay `apply` / `sync` покрывает CRM+ACL+mediamtx | OK | |
+
+Поле (≥3 EUD на одной операции): проверяется штабом на учении; серверная часть (миссии, группы, ops API) на месте.

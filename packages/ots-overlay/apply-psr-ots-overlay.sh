@@ -15,11 +15,14 @@ install -m 644 "$ROOT/site-packages/blueprints/ots_api/mission_ops_api.py" "$SIT
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/search_sector_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/track_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_invite_api.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_crm_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/mediamtx_api.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/psr_field_auth.py" "$SITE_PKG/blueprints/ots_api/"
 install -m 644 "$ROOT/site-packages/blueprints/ots_api/__init__.py" "$SITE_PKG/blueprints/ots_api/"
+install -m 644 "$ROOT/site-packages/psr_acl.py" "$SITE_PKG/psr_acl.py"
 install -m 644 "$ROOT/site-packages/models/MissionTask.py" "$SITE_PKG/models/"
 install -m 644 "$ROOT/site-packages/models/SearchSector.py" "$SITE_PKG/models/"
+install -m 644 "$ROOT/site-packages/models/CrmModels.py" "$SITE_PKG/models/"
 if [[ -f "$ROOT/site-packages/forms/MediaMTXPathConfig.py" ]]; then
   install -d "$SITE_PKG/forms"
   install -m 644 "$ROOT/site-packages/forms/MediaMTXPathConfig.py" "$SITE_PKG/forms/"
@@ -34,10 +37,12 @@ fi
 echo "==> Web assets / downloads"
 install -d "$WWW/assets/js" "$WWW/downloads"
 install -m 644 "$ROOT/www/assets/js/psr-map-ext.js" "$WWW/assets/js/"
+[[ -f "$ROOT/www/assets/js/psr-hq-nav.js" ]] && install -m 644 "$ROOT/www/assets/js/psr-hq-nav.js" "$WWW/assets/js/"
 for f in Users-CVA3KzTZ.js ClientApps-psr.js; do
   [[ -f "$ROOT/www/assets/js/$f" ]] && install -m 644 "$ROOT/www/assets/js/$f" "$WWW/assets/js/"
 done
-for f in psr-operation.html psr-sectors.html psr-start.txt psr-invite.html psr-invite-admin.html НАЧНИТЕ-ЗДЕСЬ.txt; do
+for f in psr-operation.html psr-sectors.html psr-start.txt psr-invite.html psr-invite-admin.html \
+         psr-crm.html psr-report.html НАЧНИТЕ-ЗДЕСЬ.txt; do
   [[ -f "$ROOT/www/downloads/$f" ]] && install -m 644 "$ROOT/www/downloads/$f" "$WWW/downloads/"
 done
 
@@ -57,20 +62,44 @@ if [[ -f "$MAP_SRC" ]]; then
   fi
 fi
 
-# Ensure index loads psr-map-ext.js if present
+# Ensure index loads psr-map-ext.js + psr-hq-nav.js if present
 INDEX="$WWW/index.html"
-if [[ -f "$INDEX" ]] && ! grep -q 'psr-map-ext.js' "$INDEX"; then
-  if grep -q '</body>' "$INDEX"; then
-    sed -i 's|</body>|<script src="/assets/js/psr-map-ext.js" defer></script>\n</body>|' "$INDEX"
-    echo "    injected psr-map-ext.js into index.html"
+if [[ -f "$INDEX" ]]; then
+  if ! grep -q 'psr-map-ext.js' "$INDEX"; then
+    if grep -q '</body>' "$INDEX"; then
+      sed -i 's|</body>|<script src="/assets/js/psr-map-ext.js" defer></script>\n</body>|' "$INDEX"
+      echo "    injected psr-map-ext.js into index.html"
+    fi
   fi
+  if ! grep -q 'psr-hq-nav.js' "$INDEX"; then
+    if grep -q 'psr-map-ext.js' "$INDEX"; then
+      sed -i 's|psr-map-ext.js\([^"]*\)" defer></script>|psr-map-ext.js\1" defer></script>\n    <script src="/assets/js/psr-hq-nav.js?v=1" defer></script>|' "$INDEX"
+      echo "    injected psr-hq-nav.js into index.html"
+    elif grep -q '</body>' "$INDEX"; then
+      sed -i 's|</body>|<script src="/assets/js/psr-hq-nav.js?v=1" defer></script>\n</body>|' "$INDEX"
+      echo "    injected psr-hq-nav.js into index.html"
+    fi
+  fi
+fi
+
+# truststore must be world-readable for nginx downloads
+if [[ -f "$WWW/downloads/truststore-root.p12" ]]; then
+  chmod 644 "$WWW/downloads/truststore-root.p12" || true
+  chown www-data:www-data "$WWW/downloads/truststore-root.p12" 2>/dev/null || true
 fi
 
 chown -R ots:ots "$SITE_PKG/blueprints/ots_api/mission_ops_api.py" \
   "$SITE_PKG/blueprints/ots_api/search_sector_api.py" \
   "$SITE_PKG/blueprints/ots_api/track_api.py" \
+  "$SITE_PKG/blueprints/ots_api/psr_crm_api.py" \
+  "$SITE_PKG/psr_acl.py" \
   "$SITE_PKG/models/MissionTask.py" \
-  "$SITE_PKG/models/SearchSector.py" 2>/dev/null || true
-chown www-data:www-data "$WWW/assets/js/psr-map-ext.js" "$WWW/downloads/psr-operation.html" 2>/dev/null || true
+  "$SITE_PKG/models/SearchSector.py" \
+  "$SITE_PKG/models/CrmModels.py" 2>/dev/null || true
+chown www-data:www-data "$WWW/assets/js/psr-map-ext.js" \
+  "$WWW/assets/js/psr-hq-nav.js" \
+  "$WWW/downloads/psr-operation.html" \
+  "$WWW/downloads/psr-crm.html" \
+  "$WWW/downloads/psr-report.html" 2>/dev/null || true
 
 echo "OK: overlay applied. Restart: systemctl restart opentakserver cot_parser"
