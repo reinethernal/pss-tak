@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fdroid>
+	<repo icon="icon.png" name="ПСР" pubkey="3082037c30820264a003020102020900eb52447b766dd41f300d06092a864886f70d01010b0500306b310b3009060355040613025255310b3009060355040813025255310b300906035504071302525531153013060355040a130c506c61736d6144616e636572310c300a060355040b1303505352311d301b060355040313145053532054414b20462d44726f6964205265706f3020170d3236303831343139303135335a180f32303533313233303139303135335a306b310b3009060355040613025255310b3009060355040813025255310b300906035504071302525531153013060355040a130c506c61736d6144616e636572310c300a060355040b1303505352311d301b060355040313145053532054414b20462d44726f6964205265706f30820122300d06092a864886f70d01010105000382010f003082010a0282010100cb57742dbcee5cbb7a4a0a446e132ab27b9bc85623d98d4b3e313279ac8ae63c319900a92a7e4ce5756a38ce17fb243804e0aeea2fb5712220447ba0af54d9b6f4038efd7f8ee699046579bbdec0edcbb11f339a410ffa002993d6a545ea6a6aa51ebbea4e8ee7084150a5a37dae0df1082fe6d2df22f68932b1a4f34173b7a83b4ab76cc78cd20c2f51cb18486463627624dd05d9092b2c1fe9b982459b88b4cbc904ac2e5da93c93b0cd728f258270abf8b0f4e3cca0a312d5a45eab99ca2b30af0b7e7596128413b3bc0c5ccfccc7f3c050734bbb90f5df4ce5f52de85fdeb794883853561639e7bf4db9affd2748c86aa291761804b0b02d53d08a290d7b0203010001a321301f301d0603551d0e04160414e8491754c06f76f41b83df78ae2928d2d7996c47300d06092a864886f70d01010b050003820101009dd223f7087f2c2f93bcb306ea8562d39fafa3bbde31b0fccf03fea7beacc32afdc7f7d0ea65da2abcf4a2dc63bdc46be26cd8096a45daec01b175ff94a372db3eac98ec2ca17fcfc8ad690762fb008bea84f912bab7fca9f5ccf4864cc0c2631ad7e3cf03c3b904e30e9c93115ea299d8d77acf4cddf2a9b1a7b5d230e6b487b255d460b45e5738e8c10de92ce35e0acd0487d7f31ac3a5a4e3fc938fbae3f3ab3cefcb48334d659e1939a2c9460106f6725dce21bcf04d6bdc40bd96eb1b5442041a26e8e9072c8322e7dd87d28038b8ad7d8af0c1fd98d5a7e8ac750dc26f98f52fd12bbb5a4569625797f4bd21d9f5ebb7c9a67ff9b4a82f33b015ecb368" timestamp="1787235743" url="https://reinethernal.github.io/pss-tak/fdroid/repo" version="20002">
+		<description>Полевой репозиторий ПСР (ПСР TAK + ПСР Видео) для fts.plasmadancer.ru</description>
+	</repo>
+	<application id="ru.plasmadancer.psr.tak">
+		<id>ru.plasmadancer.psr.tak</id>
+		<added>2026-08-20</added>
+		<lastupdated>2026-08-20</lastupdated>
+		<name>ПСР TAK</name>
+		<summary>Полевой TAK-клиент ПСР с картой и трансляцией</summary>
+		<desc>Основное полевое приложение ПСР: карта, CoT, метки, фото/голос,
+задания миссии, чат, режимы роли и встроенная трансляция камеры
+на MediaMTX штаба.
+Сервер в APK не зашит — подключение через персональную ссылку штаба.
+ПСР Видео нужно только для USB-камеры или трансляции экрана.
+База: OmniTAK-Android.
+</desc>
+		<license>Apache-2.0</license>
+		<categories>Navigation,Connectivity</categories>
+		<category>Navigation</category>
+		<web>https://github.com/reinethernal/pss-tak</web>
+		<source>https://github.com/reinethernal/pss-tak</source>
+		<tracker>https://github.com/reinethernal/pss-tak/issues</tracker>
+		<author>ПСР / plasmadancer</author>
+		<marketversion></marketversion>
+		<marketvercode>118</marketvercode>
+		<package>
+			<version>0.53.0</version>
+			<versioncode>118</versioncode>
+			<apkname>pss-tak-psr-14adc39.apk</apkname>
+			<hash type="sha256">2c4d731816e9fd4a10094fa06f8eba78eae2c18d83eb103648100d67d676f399</hash>
+			<size>90525585</size>
+			<sdkver>26</sdkver>
+			<targetSdkVersion>35</targetSdkVersion>
+			<added>2026-08-20</added>
+			<sig>2fbdd549da9e30c8288cc610dd301864</sig>
+			<permissions>ACCESS_COARSE_LOCATION,ACCESS_FINE_LOCATION,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_CONNECT,BLUETOOTH_SCAN,CAMERA,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_DATA_SYNC,FOREGROUND_SERVICE_MICROPHONE,INTERNET,POST_NOTIFICATIONS,RECORD_AUDIO,ru.plasmadancer.psr.tak.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</permissions>
+			<uses-permission maxSdkVersion="30" name="android.permission.BLUETOOTH"/>
+			<uses-permission maxSdkVersion="30" name="android.permission.BLUETOOTH_ADMIN"/>
+			<nativecode>arm64-v8a,armeabi-v7a,x86,x86_64</nativecode>
+		</package>
+	</application>
+	<application id="ru.plasmadancer.psr.icu">
+		<id>ru.plasmadancer.psr.icu</id>
+		<added>2026-08-20</added>
+		<lastupdated>2026-08-20</lastupdated>
+		<name>ПСР Видео</name>
+		<summary>USB / экран / камера на MediaMTX ПСР</summary>
+		<desc>Дополнительное приложение для трансляции USB-камеры, экрана телефона
+или камеры на сервер ПСР (MediaMTX + CoT).
+Обычный эфир с поля делается в ПСР TAK (Инструменты → Трансляция).
+Хост в APK не зашит — адрес приходит из ссылки штаба.
+</desc>
+		<license>Apache-2.0</license>
+		<categories>Multimedia,Connectivity</categories>
+		<category>Multimedia</category>
+		<web>https://github.com/reinethernal/pss-tak</web>
+		<source>https://github.com/reinethernal/pss-tak</source>
+		<tracker>https://github.com/reinethernal/pss-tak/issues</tracker>
+		<author>ПСР / plasmadancer</author>
+		<marketversion></marketversion>
+		<marketvercode>10715</marketvercode>
+		<package>
+			<version>1.12.0-psr</version>
+			<versioncode>10715</versioncode>
+			<apkname>opentak-icu-psr-14adc39.apk</apkname>
+			<hash type="sha256">c9c36189f742bc175d2bb9363581ddc1f33467baa91cf18582735f828b834592</hash>
+			<size>27100856</size>
+			<sdkver>26</sdkver>
+			<targetSdkVersion>35</targetSdkVersion>
+			<added>2026-08-20</added>
+			<sig>2fbdd549da9e30c8288cc610dd301864</sig>
+			<permissions>ACCESS_BACKGROUND_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_FINE_LOCATION,ACCESS_NETWORK_STATE,CAMERA,CAPTURE_VIDEO_OUTPUT,CHANGE_NETWORK_STATE,FLASHLIGHT,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MEDIA_PROJECTION,FOREGROUND_SERVICE_MICROPHONE,INTERNET,MANAGE_EXTERNAL_STORAGE,POST_NOTIFICATIONS,READ_EXTERNAL_STORAGE,RECORD_AUDIO,WAKE_LOCK,WRITE_EXTERNAL_STORAGE,ru.plasmadancer.psr.icu.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</permissions>
+			<uses-permission maxSdkVersion="28" name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+			<nativecode>arm64-v8a,armeabi-v7a,x86,x86_64</nativecode>
+			<features>android.hardware.usb.host</features>
+		</package>
+	</application>
+</fdroid>

@@ -1,0 +1,39 @@
+{
+  "/etc/issue.net": "Ubuntu 24.04.4 LTS",
+  "antiFeatures": {},
+  "apksigner": "/usr/bin/apksigner",
+  "archivePolicy0": [],
+  "commandLine": [
+    "/tmp/fdroid-venv/bin/fdroid update",
+    "--pretty",
+    "--delete-unknown"
+  ],
+  "disabled": [],
+  "endTimestamp": 1787235745955,
+  "failedBuilds": {},
+  "jarsigner": "/usr/lib/jvm/java-17-openjdk-amd64/bin/jarsigner",
+  "keytool": "/usr/lib/jvm/java-17-openjdk-amd64/bin/keytool",
+  "needsUpdate": [
+    "ru.plasmadancer.psr.icu",
+    "ru.plasmadancer.psr.tak"
+  ],
+  "noPackages": [
+    "ru.plasmadancer.psr.icu",
+    "ru.plasmadancer.psr.tak"
+  ],
+  "noUpdateCheck": [
+    "ru.plasmadancer.psr.icu",
+    "ru.plasmadancer.psr.tak"
+  ],
+  "stages": {
+    "delete_disabled_builds": 1787235741714,
+    "index.make repo": 1787235743111,
+    "prepare_apps repo": 1787235743111,
+    "process_apks": 1787235741714,
+    "read_added_date_from_all_apks": 1787235743110,
+    "remove_apks": 1787235743110,
+    "scan_repo_files": 1787235743109
+  },
+  "startTimestamp": 1787235741000,
+  "subcommand": "update"
+}

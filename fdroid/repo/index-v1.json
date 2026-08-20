@@ -1,0 +1,253 @@
+{
+  "repo": {
+    "timestamp": 1787235743000,
+    "version": 20002,
+    "name": "\u041f\u0421\u0420",
+    "icon": "icon.png",
+    "address": "https://reinethernal.github.io/pss-tak/fdroid/repo",
+    "description": "\u041f\u043e\u043b\u0435\u0432\u043e\u0439 \u0440\u0435\u043f\u043e\u0437\u0438\u0442\u043e\u0440\u0438\u0439 \u041f\u0421\u0420 (\u041f\u0421\u0420 TAK + \u041f\u0421\u0420 \u0412\u0438\u0434\u0435\u043e) \u0434\u043b\u044f fts.plasmadancer.ru"
+  },
+  "requests": {
+    "install": [],
+    "uninstall": []
+  },
+  "apps": [
+    {
+      "authorName": "\u041f\u0421\u0420 / plasmadancer",
+      "categories": [
+        "Navigation",
+        "Connectivity"
+      ],
+      "suggestedVersionCode": "118",
+      "description": "\u041e\u0441\u043d\u043e\u0432\u043d\u043e\u0435 \u043f\u043e\u043b\u0435\u0432\u043e\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u041f\u0421\u0420: \u043a\u0430\u0440\u0442\u0430, CoT, \u043c\u0435\u0442\u043a\u0438, \u0444\u043e\u0442\u043e/\u0433\u043e\u043b\u043e\u0441,\n\u0437\u0430\u0434\u0430\u043d\u0438\u044f \u043c\u0438\u0441\u0441\u0438\u0438, \u0447\u0430\u0442, \u0440\u0435\u0436\u0438\u043c\u044b \u0440\u043e\u043b\u0438 \u0438 \u0432\u0441\u0442\u0440\u043e\u0435\u043d\u043d\u0430\u044f \u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446\u0438\u044f \u043a\u0430\u043c\u0435\u0440\u044b\n\u043d\u0430 MediaMTX \u0448\u0442\u0430\u0431\u0430.\n\u0421\u0435\u0440\u0432\u0435\u0440 \u0432 APK \u043d\u0435 \u0437\u0430\u0448\u0438\u0442 \u2014 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0447\u0435\u0440\u0435\u0437 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u044c\u043d\u0443\u044e \u0441\u0441\u044b\u043b\u043a\u0443 \u0448\u0442\u0430\u0431\u0430.\n\u041f\u0421\u0420 \u0412\u0438\u0434\u0435\u043e \u043d\u0443\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f USB-\u043a\u0430\u043c\u0435\u0440\u044b \u0438\u043b\u0438 \u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446\u0438\u0438 \u044d\u043a\u0440\u0430\u043d\u0430.\n\u0411\u0430\u0437\u0430: OmniTAK-Android.\n",
+      "issueTracker": "https://github.com/reinethernal/pss-tak/issues",
+      "license": "Apache-2.0",
+      "name": "\u041f\u0421\u0420 TAK",
+      "sourceCode": "https://github.com/reinethernal/pss-tak",
+      "summary": "\u041f\u043e\u043b\u0435\u0432\u043e\u0439 TAK-\u043a\u043b\u0438\u0435\u043d\u0442 \u041f\u0421\u0420 \u0441 \u043a\u0430\u0440\u0442\u043e\u0439 \u0438 \u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446\u0438\u0435\u0439",
+      "webSite": "https://github.com/reinethernal/pss-tak",
+      "added": 1787235743000,
+      "packageName": "ru.plasmadancer.psr.tak",
+      "lastUpdated": 1787235743000
+    },
+    {
+      "authorName": "\u041f\u0421\u0420 / plasmadancer",
+      "categories": [
+        "Multimedia",
+        "Connectivity"
+      ],
+      "suggestedVersionCode": "10715",
+      "description": "\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u0434\u043b\u044f \u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446\u0438\u0438 USB-\u043a\u0430\u043c\u0435\u0440\u044b, \u044d\u043a\u0440\u0430\u043d\u0430 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430\n\u0438\u043b\u0438 \u043a\u0430\u043c\u0435\u0440\u044b \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u041f\u0421\u0420 (MediaMTX + CoT).\n\u041e\u0431\u044b\u0447\u043d\u044b\u0439 \u044d\u0444\u0438\u0440 \u0441 \u043f\u043e\u043b\u044f \u0434\u0435\u043b\u0430\u0435\u0442\u0441\u044f \u0432 \u041f\u0421\u0420 TAK (\u0418\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u044b \u2192 \u0422\u0440\u0430\u043d\u0441\u043b\u044f\u0446\u0438\u044f).\n\u0425\u043e\u0441\u0442 \u0432 APK \u043d\u0435 \u0437\u0430\u0448\u0438\u0442 \u2014 \u0430\u0434\u0440\u0435\u0441 \u043f\u0440\u0438\u0445\u043e\u0434\u0438\u0442 \u0438\u0437 \u0441\u0441\u044b\u043b\u043a\u0438 \u0448\u0442\u0430\u0431\u0430.\n",
+      "issueTracker": "https://github.com/reinethernal/pss-tak/issues",
+      "license": "Apache-2.0",
+      "name": "\u041f\u0421\u0420 \u0412\u0438\u0434\u0435\u043e",
+      "sourceCode": "https://github.com/reinethernal/pss-tak",
+      "summary": "USB / \u044d\u043a\u0440\u0430\u043d / \u043a\u0430\u043c\u0435\u0440\u0430 \u043d\u0430 MediaMTX \u041f\u0421\u0420",
+      "webSite": "https://github.com/reinethernal/pss-tak",
+      "added": 1787235742000,
+      "packageName": "ru.plasmadancer.psr.icu",
+      "lastUpdated": 1787235742000
+    }
+  ],
+  "packages": {
+    "ru.plasmadancer.psr.icu": [
+      {
+        "added": 1787235742000,
+        "apkName": "opentak-icu-psr-14adc39.apk",
+        "features": [
+          "android.hardware.usb.host"
+        ],
+        "hash": "c9c36189f742bc175d2bb9363581ddc1f33467baa91cf18582735f828b834592",
+        "hashType": "sha256",
+        "minSdkVersion": 26,
+        "nativecode": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86",
+          "x86_64"
+        ],
+        "packageName": "ru.plasmadancer.psr.icu",
+        "sig": "2fbdd549da9e30c8288cc610dd301864",
+        "signer": "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf",
+        "size": 27100856,
+        "targetSdkVersion": 35,
+        "uses-permission": [
+          [
+            "android.permission.FLASHLIGHT",
+            null
+          ],
+          [
+            "android.permission.INTERNET",
+            null
+          ],
+          [
+            "android.permission.RECORD_AUDIO",
+            null
+          ],
+          [
+            "android.permission.CAMERA",
+            null
+          ],
+          [
+            "android.permission.ACCESS_BACKGROUND_LOCATION",
+            null
+          ],
+          [
+            "android.permission.ACCESS_COARSE_LOCATION",
+            null
+          ],
+          [
+            "android.permission.ACCESS_FINE_LOCATION",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE",
+            null
+          ],
+          [
+            "android.permission.POST_NOTIFICATIONS",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_CAMERA",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+            null
+          ],
+          [
+            "android.permission.CAPTURE_VIDEO_OUTPUT",
+            null
+          ],
+          [
+            "android.permission.CHANGE_NETWORK_STATE",
+            null
+          ],
+          [
+            "android.permission.WRITE_EXTERNAL_STORAGE",
+            28
+          ],
+          [
+            "android.permission.MANAGE_EXTERNAL_STORAGE",
+            null
+          ],
+          [
+            "android.permission.READ_EXTERNAL_STORAGE",
+            null
+          ],
+          [
+            "android.permission.ACCESS_NETWORK_STATE",
+            null
+          ],
+          [
+            "android.permission.WAKE_LOCK",
+            null
+          ],
+          [
+            "ru.plasmadancer.psr.icu.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            null
+          ]
+        ],
+        "versionCode": 10715,
+        "versionName": "1.12.0-psr"
+      }
+    ],
+    "ru.plasmadancer.psr.tak": [
+      {
+        "added": 1787235743000,
+        "apkName": "pss-tak-psr-14adc39.apk",
+        "hash": "2c4d731816e9fd4a10094fa06f8eba78eae2c18d83eb103648100d67d676f399",
+        "hashType": "sha256",
+        "minSdkVersion": 26,
+        "nativecode": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86",
+          "x86_64"
+        ],
+        "packageName": "ru.plasmadancer.psr.tak",
+        "sig": "2fbdd549da9e30c8288cc610dd301864",
+        "signer": "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf",
+        "size": 90525585,
+        "targetSdkVersion": 35,
+        "uses-permission": [
+          [
+            "android.permission.INTERNET",
+            null
+          ],
+          [
+            "android.permission.CAMERA",
+            null
+          ],
+          [
+            "android.permission.RECORD_AUDIO",
+            null
+          ],
+          [
+            "android.permission.ACCESS_NETWORK_STATE",
+            null
+          ],
+          [
+            "android.permission.ACCESS_FINE_LOCATION",
+            null
+          ],
+          [
+            "android.permission.ACCESS_COARSE_LOCATION",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_CAMERA",
+            null
+          ],
+          [
+            "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+            null
+          ],
+          [
+            "android.permission.POST_NOTIFICATIONS",
+            null
+          ],
+          [
+            "android.permission.BLUETOOTH_CONNECT",
+            null
+          ],
+          [
+            "android.permission.BLUETOOTH_SCAN",
+            null
+          ],
+          [
+            "android.permission.BLUETOOTH",
+            30
+          ],
+          [
+            "android.permission.BLUETOOTH_ADMIN",
+            30
+          ],
+          [
+            "android.permission.ACCESS_WIFI_STATE",
+            null
+          ],
+          [
+            "ru.plasmadancer.psr.tak.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            null
+          ]
+        ],
+        "versionCode": 118,
+        "versionName": "0.53.0"
+      }
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "repo": {
+    "name": {
+      "en-US": "ПСР"
+    },
+    "description": {
+      "en-US": "Полевой репозиторий ПСР (ПСР TAK + ПСР Видео) для fts.plasmadancer.ru"
+    },
+    "icon": {
+      "en-US": {
+        "name": "/icons/icon.png",
+        "sha256": "3f39597866e26bb3ee1f4e7d3dcc30ff84d60eed9e905aa7b70a6871d7139f32",
+        "size": 84225
+      }
+    },
+    "address": "https://reinethernal.github.io/pss-tak/fdroid/repo",
+    "timestamp": 1787235743000,
+    "categories": {
+      "Connectivity": {
+        "name": {
+          "en-US": "Connectivity"
+        }
+      },
+      "Multimedia": {
+        "name": {
+          "en-US": "Multimedia"
+        }
+      },
+      "Navigation": {
+        "name": {
+          "en-US": "Navigation"
+        }
+      }
+    }
+  },
+  "packages": {
+    "ru.plasmadancer.psr.icu": {
+      "metadata": {
+        "added": 1787235742000,
+        "categories": [
+          "Multimedia",
+          "Connectivity"
+        ],
+        "issueTracker": "https://github.com/reinethernal/pss-tak/issues",
+        "lastUpdated": 1787235742000,
+        "license": "Apache-2.0",
+        "sourceCode": "https://github.com/reinethernal/pss-tak",
+        "webSite": "https://github.com/reinethernal/pss-tak",
+        "authorName": "ПСР / plasmadancer",
+        "name": {
+          "en-US": "ПСР Видео"
+        },
+        "summary": {
+          "en-US": "USB / экран / камера на MediaMTX ПСР"
+        },
+        "description": {
+          "en-US": "Дополнительное приложение для трансляции USB-камеры, экрана телефона\nили камеры на сервер ПСР (MediaMTX + CoT).\nОбычный эфир с поля делается в ПСР TAK (Инструменты → Трансляция).\nХост в APK не зашит — адрес приходит из ссылки штаба.\n"
+        },
+        "preferredSigner": "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf"
+      },
+      "versions": {
+        "c9c36189f742bc175d2bb9363581ddc1f33467baa91cf18582735f828b834592": {
+          "added": 1787235742000,
+          "file": {
+            "name": "/opentak-icu-psr-14adc39.apk",
+            "sha256": "c9c36189f742bc175d2bb9363581ddc1f33467baa91cf18582735f828b834592",
+            "size": 27100856
+          },
+          "manifest": {
+            "nativecode": [
+              "arm64-v8a",
+              "armeabi-v7a",
+              "x86",
+              "x86_64"
+            ],
+            "versionName": "1.12.0-psr",
+            "versionCode": 10715,
+            "features": [
+              {
+                "name": "android.hardware.usb.host"
+              }
+            ],
+            "usesSdk": {
+              "minSdkVersion": 26,
+              "targetSdkVersion": 35
+            },
+            "signer": {
+              "sha256": [
+                "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf"
+              ]
+            },
+            "usesPermission": [
+              {
+                "name": "android.permission.FLASHLIGHT"
+              },
+              {
+                "name": "android.permission.INTERNET"
+              },
+              {
+                "name": "android.permission.RECORD_AUDIO"
+              },
+              {
+                "name": "android.permission.CAMERA"
+              },
+              {
+                "name": "android.permission.ACCESS_BACKGROUND_LOCATION"
+              },
+              {
+                "name": "android.permission.ACCESS_COARSE_LOCATION"
+              },
+              {
+                "name": "android.permission.ACCESS_FINE_LOCATION"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE"
+              },
+              {
+                "name": "android.permission.POST_NOTIFICATIONS"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_CAMERA"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
+              },
+              {
+                "name": "android.permission.CAPTURE_VIDEO_OUTPUT"
+              },
+              {
+                "name": "android.permission.CHANGE_NETWORK_STATE"
+              },
+              {
+                "name": "android.permission.WRITE_EXTERNAL_STORAGE",
+                "maxSdkVersion": 28
+              },
+              {
+                "name": "android.permission.MANAGE_EXTERNAL_STORAGE"
+              },
+              {
+                "name": "android.permission.READ_EXTERNAL_STORAGE"
+              },
+              {
+                "name": "android.permission.ACCESS_NETWORK_STATE"
+              },
+              {
+                "name": "android.permission.WAKE_LOCK"
+              },
+              {
+                "name": "ru.plasmadancer.psr.icu.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "ru.plasmadancer.psr.tak": {
+      "metadata": {
+        "added": 1787235743000,
+        "categories": [
+          "Navigation",
+          "Connectivity"
+        ],
+        "issueTracker": "https://github.com/reinethernal/pss-tak/issues",
+        "lastUpdated": 1787235743000,
+        "license": "Apache-2.0",
+        "sourceCode": "https://github.com/reinethernal/pss-tak",
+        "webSite": "https://github.com/reinethernal/pss-tak",
+        "authorName": "ПСР / plasmadancer",
+        "name": {
+          "en-US": "ПСР TAK"
+        },
+        "summary": {
+          "en-US": "Полевой TAK-клиент ПСР с картой и трансляцией"
+        },
+        "description": {
+          "en-US": "Основное полевое приложение ПСР: карта, CoT, метки, фото/голос,\nзадания миссии, чат, режимы роли и встроенная трансляция камеры\nна MediaMTX штаба.\nСервер в APK не зашит — подключение через персональную ссылку штаба.\nПСР Видео нужно только для USB-камеры или трансляции экрана.\nБаза: OmniTAK-Android.\n"
+        },
+        "preferredSigner": "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf"
+      },
+      "versions": {
+        "2c4d731816e9fd4a10094fa06f8eba78eae2c18d83eb103648100d67d676f399": {
+          "added": 1787235743000,
+          "file": {
+            "name": "/pss-tak-psr-14adc39.apk",
+            "sha256": "2c4d731816e9fd4a10094fa06f8eba78eae2c18d83eb103648100d67d676f399",
+            "size": 90525585
+          },
+          "manifest": {
+            "nativecode": [
+              "arm64-v8a",
+              "armeabi-v7a",
+              "x86",
+              "x86_64"
+            ],
+            "versionName": "0.53.0",
+            "versionCode": 118,
+            "usesSdk": {
+              "minSdkVersion": 26,
+              "targetSdkVersion": 35
+            },
+            "signer": {
+              "sha256": [
+                "6133f03c118016c38a427c9764802088239b53c707d025e3b5740b91055b8eaf"
+              ]
+            },
+            "usesPermission": [
+              {
+                "name": "android.permission.INTERNET"
+              },
+              {
+                "name": "android.permission.CAMERA"
+              },
+              {
+                "name": "android.permission.RECORD_AUDIO"
+              },
+              {
+                "name": "android.permission.ACCESS_NETWORK_STATE"
+              },
+              {
+                "name": "android.permission.ACCESS_FINE_LOCATION"
+              },
+              {
+                "name": "android.permission.ACCESS_COARSE_LOCATION"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_CAMERA"
+              },
+              {
+                "name": "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+              },
+              {
+                "name": "android.permission.POST_NOTIFICATIONS"
+              },
+              {
+                "name": "android.permission.BLUETOOTH_CONNECT"
+              },
+              {
+                "name": "android.permission.BLUETOOTH_SCAN"
+              },
+              {
+                "name": "android.permission.BLUETOOTH",
+                "maxSdkVersion": 30
+              },
+              {
+                "name": "android.permission.BLUETOOTH_ADMIN",
+                "maxSdkVersion": 30
+              },
+              {
+                "name": "android.permission.ACCESS_WIFI_STATE"
+              },
+              {
+                "name": "ru.plasmadancer.psr.tak.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
