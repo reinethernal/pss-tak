@@ -1,5 +1,5 @@
 /**
- * ПСР штаб на основной карте: фильтры точек, Leaflet.Draw секторов, список CRUD.
+ * ПСС штаб на основной карте: фильтры точек, Leaflet.Draw секторов, список CRUD.
  * Загружается из index.html после OTS UI. Слетает при апдейте OTS.
  */
 (function () {
@@ -840,7 +840,7 @@
     panelOpen = !!open;
     if (panel) panel.style.display = panelOpen ? "block" : "none";
     if (toggleBtn) {
-      toggleBtn.textContent = panelOpen ? "✕ ПСР" : "ПСР";
+      toggleBtn.textContent = panelOpen ? "✕ ПСС" : "ПСС";
       toggleBtn.setAttribute("aria-expanded", panelOpen ? "true" : "false");
     }
   }
@@ -858,8 +858,8 @@
     toggleBtn = document.createElement("button");
     toggleBtn.id = "psr-hq-toggle";
     toggleBtn.type = "button";
-    toggleBtn.textContent = "ПСР";
-    toggleBtn.title = "Панель секторов и точек ПСР";
+    toggleBtn.textContent = "ПСС";
+    toggleBtn.title = "Панель секторов и точек ПСС";
     toggleBtn.setAttribute("aria-expanded", "false");
     // Below Mantine AppShell overlays (~200–300 navbar, ~1000 drawer/modal)
     toggleBtn.style.cssText =
@@ -901,14 +901,14 @@
       "box-shadow:0 8px 28px rgba(0,0,0,.45)";
     panel.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px'>" +
-      "<strong>Секторы ПСР</strong>" +
+      "<strong>Секторы ПСС</strong>" +
       "<div style='display:flex;gap:8px;align-items:center'>" +
       "<a href='/downloads/psr-operation.html' style='color:#8cf;font-size:12px'>Операция…</a>" +
       "<button type='button' id='psr-hq-close' style='border:1px solid #555;background:#333;color:#eee;border-radius:6px;padding:2px 8px;cursor:pointer'>✕</button>" +
       "</div></div>" +
       "<div class='hint' style='opacity:.75;margin-bottom:8px;font-size:12px'>Полигон — слева. Треки = покрытие; «пройден» — вручную.</div>" +
       "<div id='psr-point-filters' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
-      "<div style='font-weight:600;margin-bottom:6px'>Точки ПСР</div>" +
+      "<div style='font-weight:600;margin-bottom:6px'>Точки ПСС</div>" +
       "<div id='psr-filter-btns' style='display:flex;gap:6px;flex-wrap:wrap'></div></div>" +
       "<div id='psr-export-box' style='margin-bottom:12px;padding:8px;border:1px solid #555;border-radius:8px'>" +
       "<div style='font-weight:600;margin-bottom:6px'>Экспорт</div>" +

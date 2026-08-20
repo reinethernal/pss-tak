@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Приглашение в ПСР</title>
+  <title>Приглашение в ПСС</title>
   <style>
     :root { --bg:#0f1419; --card:#1a2332; --fg:#e8eef7; --muted:#9aa8bc; --acc:#3d9cf0; --ok:#3dd68c; }
     * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
 </head>
 <body>
   <div class="card" id="main">
-    <h1>Подключение к ПСР</h1>
+    <h1>Подключение к ПСС</h1>
     <p class="muted">Откройте ссылку, которую прислал штаб. Здесь — логин, сертификат и настройки.</p>
     <p id="status" class="muted">Загрузка…</p>
   </div>
@@ -109,13 +109,13 @@
         }
 
         main.innerHTML =
-          '<h1>Подключение к ПСР</h1>' +
+          '<h1>Подключение к ПСС</h1>' +
           '<p><strong>Логин / позывной:</strong> <span class="mono">' + data.username + '</span></p>' +
           '<p class="muted">' + (data.hint || '') + '</p>' +
           '<p><strong>Пароль корневого сертификата (P12):</strong> <span class="mono ok">' + (data.ca_password || 'atakatak') + '</span></p>' +
 
           '<h2>Универсальный конфиг</h2>' +
-          '<p class="muted">Один набор параметров для любого клиента (ПСР TAK, ATAK CIV, OpenTAK ICU / ПСР Видео). Пароль учётки штаб сообщает отдельно.</p>' +
+          '<p class="muted">Один набор параметров для любого клиента (ПСС TAK, ATAK CIV, OpenTAK ICU / ПСС Видео). Пароль учётки штаб сообщает отдельно.</p>' +
           '<pre class="mono" id="cfgBox" style="white-space:pre-wrap;background:#0b1016;padding:10px;border-radius:8px;">' +
             cfgText.replace(/</g,'') + '</pre>' +
           '<button type="button" class="btn secondary" id="btnCopyCfg">Скопировать конфиг</button>' +
@@ -125,8 +125,8 @@
           '<div class="warn">В Chrome / Telegram ссылка <code>tak://</code> часто не открывает приложение. Жмите кнопку приложения или QR камерой телефона.</div>' +
 
           '<h2>1. Установите клиент</h2>' +
-          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">ПСР TAK</a>' +
-          '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">ПСР Видео (опция)</a>' +
+          '<a class="btn" href="' + (d.pss_tak || '/downloads/PSS-TAK-latest.apk') + '">ПСС TAK</a>' +
+          '<a class="btn secondary" href="' + (d.icu || '/downloads/OpenTAK_ICU-PSR-latest.apk') + '">ПСС Видео (опция)</a>' +
           '<a class="btn secondary" href="' + (d.field_kit || '/downloads/psr-field-kit.zip') + '">Комплект ATAK</a>' +
 
           '<h2>2. Открыть в приложении</h2>' +
@@ -136,7 +136,7 @@
           appBtn('psr_icu', 'big secondary') +
           '<a class="btn big secondary" id="btnAtakCs" href="#">Позывной в ATAK (preference)</a>' +
           '<a class="btn big secondary" id="btnAtakZip" href="#">Импорт datapackage в ATAK</a>' +
-          '<p class="muted">ПСР TAK после enrollment сам умеет трансляцию (Инструменты → Трансляция). Отдельное ICU нужно только для USB/экрана.</p>' +
+          '<p class="muted">ПСС TAK после enrollment сам умеет трансляцию (Инструменты → Трансляция). Отдельное ICU нужно только для USB/экрана.</p>' +
           '<img class="qr" alt="QR enrollment" src="' + qrImg + '" width="220" height="220" />' +
 
           '<h2>3. Сертификат вручную</h2>' +

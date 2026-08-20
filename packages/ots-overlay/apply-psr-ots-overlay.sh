@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore ПСР patches after an official OpenTAKServer upgrade.
+# Restore ПСС patches after an official OpenTAKServer upgrade.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SITE_PKG="${OTS_SITE_PKG:-/home/ots/.opentakserver_venv/lib/python3.11/site-packages/opentakserver}"

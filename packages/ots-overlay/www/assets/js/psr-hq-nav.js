@@ -1,5 +1,5 @@
 /**
- * ПСР HQ nav: inject «Обращения» + operation links into OTS shell menu.
+ * ПСС HQ nav: inject «Обращения» + operation links into OTS shell menu.
  * Loaded from index.html; no-op if UI not ready.
  */
 (function () {

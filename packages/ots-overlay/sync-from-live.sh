@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copy live OTS ПСР patches into this overlay mirror (for git commit).
+# Copy live OTS ПСС patches into this overlay mirror (for git commit).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SITE_PKG="${OTS_SITE_PKG:-/home/ots/.opentakserver_venv/lib/python3.11/site-packages/opentakserver}"

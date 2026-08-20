@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ПСР — обращения (CRM)</title>
+  <title>ПСС — обращения (CRM)</title>
   <style>
     :root { --bg:#1a1a1a; --card:#252525; --line:#444; --acc:#2a6; --txt:#eee; --mut:#aaa; --warn:#c90; }
     * { box-sizing: border-box; }
@@ -22,9 +22,10 @@
     .card.active { border-color:var(--acc); }
     .muted { color:var(--mut); font-size:13px; }
     .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#333; border:1px solid var(--line); font-size:12px; }
-    .badge.new, .badge.triage { border-color:var(--warn); color:#fc6; }
-    .badge.active { border-color:var(--acc); color:#6c6; }
-    .badge.closed, .badge.false_alarm { opacity:.7; }
+    .badge[data-st="новый"], .badge[data-st="разбор"] { border-color:var(--warn); color:#fc6; }
+    .badge[data-st="активное"] { border-color:var(--acc); color:#6c6; }
+    .badge[data-st="закрыто"], .badge[data-st="ложный"] { opacity:.7; }
+    .badge[data-st="приостановлено"] { border-color:#88a; color:#ace; }
     label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
     .field { margin-bottom:10px; }
     .field input, .field textarea, .field select { width:100%; }
@@ -36,7 +37,7 @@
 </head>
 <body>
   <header>
-    <h1>Обращения ПСР</h1>
+    <h1>Обращения ПСС</h1>
     <a href="/map">← Карта</a>
     <a href="/downloads/psr-operation.html">Операция</a>
     <a href="/downloads/psr-report.html" target="_blank">Публичная форма</a>
@@ -47,8 +48,8 @@
       <div class="row">
         <select id="f-status">
           <option value="">Все статусы</option>
-          <option>new</option><option>triage</option><option>active</option>
-          <option>suspended</option><option>closed</option><option>false_alarm</option>
+          <option>новый</option><option>разбор</option><option>активное</option>
+          <option>приостановлено</option><option>закрыто</option><option>ложный</option>
         </select>
         <input id="f-q" placeholder="Поиск…" />
         <button type="button" id="reload">Обновить</button>
@@ -117,7 +118,8 @@ async function loadMe() {
     throw new Error('no crm');
   }
 }
-function badge(st) { return `<span class="badge ${st||''}">${st||'?'}</span>`; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function badge(st) { return `<span class="badge" data-st="${esc(st||'')}">${esc(st||'?')}</span>`; }
 function renderList() {
   const box = $('list');
   box.innerHTML = cases.map(c => `
@@ -156,10 +158,10 @@ async function openCase(id) {
       <div class="field"><label>Заголовок</label><input id="d-title" value="${esc(c.title||'')}" ${ro?'disabled':''}/></div>
       <div class="row">
         <div class="field" style="flex:1"><label>Статус</label>
-          <select id="d-status" ${ro?'disabled':''}>${opts(['new','triage','active','suspended','closed','false_alarm'], c.status)}</select>
+          <select id="d-status" ${ro?'disabled':''}>${opts(['новый','разбор','активное','приостановлено','закрыто','ложный'], c.status)}</select>
         </div>
         <div class="field" style="flex:1"><label>Приоритет</label>
-          <select id="d-priority" ${ro?'disabled':''}>${opts(['low','normal','high','critical'], c.priority)}</select>
+          <select id="d-priority" ${ro?'disabled':''}>${opts(['низкий','обычный','высокий','критический'], c.priority)}</select>
         </div>
       </div>
       <div class="field"><label>Пропавший</label><input id="d-missing" value="${esc(c.missing_name||'')}" ${ro?'disabled':''}/></div>
@@ -209,7 +211,6 @@ async function openCase(id) {
     $('d-link-mission').onclick = linkMission;
   }
 }
-function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function opts(list, cur){ return list.map(v => `<option ${v===cur?'selected':''}>${v}</option>`).join(''); }
 async function saveCase() {
   try {
@@ -225,7 +226,7 @@ async function saveCase() {
       appearance: $('d-appearance').value,
       summary: $('d-summary').value,
       mission_name: $('d-mission').value || null,
-      closed_reason: $('d-status').value==='closed' ? 'manual' : null,
+      closed_reason: $('d-status').value==='закрыто' ? 'вручную' : null,
     })});
     await loadCases(); await openCase(selectedId); setStatus('Сохранено');
   } catch(e){ setStatus(e.message); }
@@ -263,7 +264,7 @@ async function newCase() {
   const title = prompt('Краткое название дела / ФИО пропавшего');
   if (!title) return;
   try {
-    const j = await api('/api/crm/cases', { method:'POST', body: JSON.stringify({ title, missing_name: title, source:'phone' })});
+    const j = await api('/api/crm/cases', { method:'POST', body: JSON.stringify({ title, missing_name: title, source:'телефон' })});
     await loadCases(); await openCase(j.result.id);
   } catch(e){ setStatus(e.message); }
 }
