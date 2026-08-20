@@ -133,4 +133,14 @@ if [[ -d "$ROOT/www/assets/pss-brand" ]]; then
   echo "    pss-brand icons applied"
 fi
 
+
+# Login / shared OTS logo + Login title
+for f in Login-BMT7lUyW.js apiRoutes-BhHdpDjR.js; do
+  [[ -f "$ROOT/www/assets/js/$f" ]] && install -m 644 "$ROOT/www/assets/js/$f" "$WWW/assets/js/$f" && echo "    $f restored"
+done
+if [[ -f "$ROOT/www/assets/images/ots-logo-BovW17cF.png" ]]; then
+  install -d "$WWW/assets/images"
+  install -m 644 "$ROOT/www/assets/images/ots-logo-BovW17cF.png" "$WWW/assets/images/"
+fi
+
 echo "OK: overlay applied. Restart: systemctl restart opentakserver cot_parser"
