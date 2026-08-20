@@ -6,9 +6,9 @@
   <title>Сообщить о пропавшем — ПСС</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=pss1" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=pss1" />
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
-    :root { --bg:#0f1419; --card:#1c2430; --line:#334; --acc:#2a8; --txt:#eef2f6; --mut:#9aa; }
+    :root { --bg:#0f1419; --card:#1c2430; --line:#334; --acc:#2a8; --txt:#eef2f6; --mut:#9aa; --err:#c55; }
     * { box-sizing: border-box; }
     body {
       margin:0; min-height:100vh; color:var(--txt);
@@ -17,79 +17,291 @@
                   linear-gradient(160deg, #0f1419, #152028 60%, #101820);
     }
     .wrap { max-width:560px; margin:0 auto; padding:28px 16px 48px; }
-    h1 { font-size:1.6rem; margin:0 0 8px; letter-spacing:-.02em; }
+    h1 { font-size:1.6rem; margin:8px 0; letter-spacing:-.02em; }
     .lead { color:var(--mut); margin:0 0 22px; line-height:1.45; }
-    form { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+    form { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; max-width:100%; }
     label { display:block; font-size:13px; color:var(--mut); margin:12px 0 6px; }
-    input, textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:#121820; color:var(--txt); }
-    button { margin-top:18px; width:100%; padding:12px; border:0; border-radius:8px; background:var(--acc); color:#04110c; font-weight:700; font-size:1rem; cursor:pointer; }
-    button:disabled { opacity:.5; cursor:wait; }
+    .hint { font-size:12px; color:var(--mut); margin-top:4px; }
+    input, textarea, select {
+      width:100%; max-width:100%; padding:10px 12px; border-radius:8px;
+      border:1px solid var(--line); background:#121820; color:var(--txt);
+      font:inherit;
+    }
+    input.invalid, textarea.invalid, select.invalid { border-color:var(--err); }
+    .field-err { color:#f88; font-size:12px; margin-top:4px; display:none; }
+    .field-err.show { display:block; }
+    textarea { resize: vertical; min-height:72px; max-height:160px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:520px) { .row2 { grid-template-columns:1fr; } }
+    #map {
+      width:100%; max-width:100%; height:240px; max-height:240px;
+      border-radius:8px; border:1px solid var(--line); margin-top:8px; z-index:1;
+    }
+    .map-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .map-actions button {
+      width:auto; margin:0; padding:8px 12px; font-size:13px; font-weight:600;
+      background:#2a3548; color:var(--txt); border:1px solid var(--line); border-radius:8px; cursor:pointer;
+    }
+    .map-actions button.primary { background:var(--acc); color:#04110c; border-color:var(--acc); }
+    button#go {
+      margin-top:18px; width:100%; max-width:100%; padding:12px; border:0; border-radius:8px;
+      background:var(--acc); color:#04110c; font-weight:700; font-size:1rem; cursor:pointer;
+    }
+    button#go:disabled { opacity:.5; cursor:wait; }
     .ok, .err { margin-top:14px; padding:12px; border-radius:8px; }
     .ok { background:#143024; border:1px solid #2a8; }
     .err { background:#3a1818; border:1px solid #a44; }
-    .hp { position:absolute; left:-9999px; opacity:0; height:0; width:0; }
+    .hp { position:absolute; left:-9999px; opacity:0; height:0; width:0; overflow:hidden; }
     footer { margin-top:18px; font-size:12px; color:var(--mut); }
+    .coords { font-size:12px; color:var(--mut); margin-top:6px; font-variant-numeric:tabular-nums; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <img src="/assets/pss-brand/logo/horizontal-40.png" alt="ПСС" height="36" style="display:block" />
+    <img src="/assets/pss-brand/logo/horizontal-40.png" alt="ПСС" height="36" style="display:block;max-width:100%" />
     <h1>ПСС — сообщить о пропавшем</h1>
     <p class="lead">Форма для граждан и свидетелей. Диспетчер штаба получит обращение в очередь.</p>
     <form id="f" novalidate>
-      <label>ФИО пропавшего *</label>
-      <input name="missing_name" required maxlength="200" autocomplete="name" />
-      <label>Возраст (примерно)</label>
-      <input name="missing_age" maxlength="32" />
-      <label>Пол</label>
-      <select name="missing_sex"><option value="">—</option><option>м</option><option>ж</option><option>не указан</option></select>
-      <label>Где и когда видели последний раз</label>
-      <input name="last_seen_place" maxlength="500" placeholder="Адрес / ориентир" />
-      <input name="last_seen_at" type="datetime-local" />
-      <label>Приметы, одежда, особенности</label>
-      <textarea name="appearance" rows="4" maxlength="4000"></textarea>
-      <label>Кратко, что случилось</label>
-      <textarea name="summary" rows="3" maxlength="4000"></textarea>
-      <label>Ваше имя</label>
-      <input name="reporter_name" maxlength="200" />
-      <label>Ваш телефон *</label>
-      <input name="reporter_phone" required maxlength="40" inputmode="tel" placeholder="+7…" />
+      <label for="missing_name">ФИО пропавшего *</label>
+      <input id="missing_name" name="missing_name" required maxlength="200" autocomplete="name" />
+      <div class="field-err" data-for="missing_name">Укажите фамилию и имя пропавшего</div>
+
+      <div class="row2">
+        <div>
+          <label for="missing_age">Возраст (примерно)</label>
+          <input id="missing_age" name="missing_age" maxlength="32" inputmode="numeric" placeholder="например 72" />
+        </div>
+        <div>
+          <label for="missing_sex">Пол</label>
+          <select id="missing_sex" name="missing_sex">
+            <option value="">Не указан</option>
+            <option value="мужской">Мужской</option>
+            <option value="женский">Женский</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="last_seen_place">Адрес / ориентир (последнее место)</label>
+      <input id="last_seen_place" name="last_seen_place" maxlength="500" placeholder="Улица, дом, ориентир" />
+      <div class="hint">Укажите текстом и/или отметьте точку на карте</div>
+      <div id="map" aria-label="Карта: нажмите, чтобы отметить место"></div>
+      <div class="map-actions">
+        <button type="button" class="primary" id="btn-geo">Моё местоположение</button>
+        <button type="button" id="btn-clear-pin">Сбросить точку</button>
+      </div>
+      <div class="coords" id="coords">Точка на карте не выбрана</div>
+      <input type="hidden" name="lkp_lat" id="lkp_lat" />
+      <input type="hidden" name="lkp_lon" id="lkp_lon" />
+
+      <label for="last_seen_at">Когда видели последний раз</label>
+      <input id="last_seen_at" name="last_seen_at" type="datetime-local" />
+
+      <label for="appearance">Приметы, одежда, особенности</label>
+      <textarea id="appearance" name="appearance" rows="3" maxlength="2000" placeholder="Рост, одежда, особые приметы…"></textarea>
+
+      <label for="summary">Кратко, что случилось</label>
+      <textarea id="summary" name="summary" rows="3" maxlength="2000"></textarea>
+
+      <label for="reporter_name">Ваше имя</label>
+      <input id="reporter_name" name="reporter_name" maxlength="200" autocomplete="name" />
+
+      <label for="reporter_phone">Ваш телефон *</label>
+      <input id="reporter_phone" name="reporter_phone" required maxlength="18" inputmode="tel"
+             autocomplete="tel" placeholder="+7 (999) 999-99-99" />
+      <div class="field-err" data-for="reporter_phone">Укажите телефон в формате +7 (9XX) XXX-XX-XX</div>
+      <div class="hint">На этот номер может перезвонить штаб</div>
+
       <div class="hp" aria-hidden="true">
         <label>Website</label>
         <input name="website" tabindex="-1" autocomplete="off" />
       </div>
+
       <button type="submit" id="go">Отправить</button>
       <div id="msg"></div>
     </form>
     <footer>Экстренный случай — звоните 112. Эта форма не заменяет вызов спасателей.</footer>
   </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-const f = document.getElementById('f');
-const msg = document.getElementById('msg');
-const go = document.getElementById('go');
-f.onsubmit = async (e) => {
-  e.preventDefault();
-  msg.innerHTML = '';
-  const fd = new FormData(f);
-  const body = Object.fromEntries(fd.entries());
-  if (body.last_seen_at) body.last_seen_at = new Date(body.last_seen_at).toISOString();
-  go.disabled = true;
-  try {
-    const r = await fetch('/api/crm/public/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) throw new Error(j.error || ('Ошибка '+r.status));
-    msg.innerHTML = `<div class="ok">Принято. Номер обращения: <strong>${j.case_number}</strong>. Сохраните его — штаб может перезвонить.</div>`;
-    f.reset();
-  } catch (err) {
-    msg.innerHTML = `<div class="err">${err.message}</div>`;
-  } finally {
-    go.disabled = false;
+(function () {
+  const f = document.getElementById('f');
+  const msg = document.getElementById('msg');
+  const go = document.getElementById('go');
+  const phone = document.getElementById('reporter_phone');
+  const place = document.getElementById('last_seen_place');
+  const latEl = document.getElementById('lkp_lat');
+  const lonEl = document.getElementById('lkp_lon');
+  const coordsEl = document.getElementById('coords');
+
+  const ERR_MAP = {
+    'missing_name and reporter_phone required': 'Заполните ФИО пропавшего и ваш телефон',
+    'Invalid input': 'Проверьте ФИО и телефон — данные слишком короткие или неверные',
+    'Too many requests': 'Слишком много отправок. Подождите несколько минут и попробуйте снова',
+  };
+
+  function showFieldErr(name, on) {
+    const el = document.querySelector('.field-err[data-for="' + name + '"]');
+    const inp = document.getElementById(name);
+    if (el) el.classList.toggle('show', !!on);
+    if (inp) inp.classList.toggle('invalid', !!on);
   }
-};
+
+  function digitsPhone(v) {
+    let d = String(v || '').replace(/\D/g, '');
+    if (d.startsWith('8')) d = '7' + d.slice(1);
+    if (d.length && !d.startsWith('7')) d = '7' + d;
+    return d.slice(0, 11);
+  }
+
+  function formatPhone(d) {
+    d = digitsPhone(d);
+    if (!d) return '';
+    let out = '+7';
+    if (d.length > 1) out += ' (' + d.slice(1, 4);
+    if (d.length >= 4) out += ')';
+    if (d.length > 4) out += ' ' + d.slice(4, 7);
+    if (d.length > 7) out += '-' + d.slice(7, 9);
+    if (d.length > 9) out += '-' + d.slice(9, 11);
+    return out;
+  }
+
+  phone.addEventListener('input', () => {
+    const cur = phone.selectionStart;
+    const before = phone.value.length;
+    phone.value = formatPhone(phone.value);
+    const after = phone.value.length;
+    try { phone.setSelectionRange(cur + (after - before), cur + (after - before)); } catch (_) {}
+    showFieldErr('reporter_phone', false);
+  });
+  phone.addEventListener('blur', () => {
+    const d = digitsPhone(phone.value);
+    if (phone.value && d.length !== 11) showFieldErr('reporter_phone', true);
+  });
+
+  document.getElementById('missing_name').addEventListener('input', () => showFieldErr('missing_name', false));
+
+  // --- map picker ---
+  let map, marker;
+  const defaultCenter = [59.93, 30.33]; // СПб как разумный дефолт для fts
+  map = L.map('map', { scrollWheelZoom: true }).setView(defaultCenter, 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 200);
+
+  function setPin(lat, lon, reverse) {
+    lat = +lat; lon = +lon;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    latEl.value = lat.toFixed(6);
+    lonEl.value = lon.toFixed(6);
+    coordsEl.textContent = 'Координаты: ' + lat.toFixed(5) + ', ' + lon.toFixed(5);
+    if (marker) marker.setLatLng([lat, lon]);
+    else marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+    marker.on('dragend', () => {
+      const p = marker.getLatLng();
+      setPin(p.lat, p.lng, true);
+    });
+    map.setView([lat, lon], Math.max(map.getZoom(), 14));
+    if (reverse) reverseGeocode(lat, lon);
+  }
+
+  function clearPin() {
+    latEl.value = '';
+    lonEl.value = '';
+    coordsEl.textContent = 'Точка на карте не выбрана';
+    if (marker) { map.removeLayer(marker); marker = null; }
+  }
+
+  async function reverseGeocode(lat, lon) {
+    try {
+      const r = await fetch(
+        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lon + '&accept-language=ru',
+        { headers: { 'Accept': 'application/json' } }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const label = j.display_name;
+      if (label && (!place.value || place.value.length < 8)) place.value = label.slice(0, 500);
+    } catch (_) {}
+  }
+
+  map.on('click', (e) => setPin(e.latlng.lat, e.latlng.lng, true));
+
+  document.getElementById('btn-clear-pin').onclick = (e) => { e.preventDefault(); clearPin(); };
+  document.getElementById('btn-geo').onclick = (e) => {
+    e.preventDefault();
+    if (!navigator.geolocation) {
+      msg.innerHTML = '<div class="err">Браузер не поддерживает геолокацию — отметьте точку на карте вручную</div>';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setPin(pos.coords.latitude, pos.coords.longitude, true),
+      () => { msg.innerHTML = '<div class="err">Не удалось получить местоположение. Разрешите доступ к геолокации или отметьте точку на карте.</div>'; },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+
+  function validate() {
+    let ok = true;
+    const name = (document.getElementById('missing_name').value || '').trim();
+    if (name.length < 2) { showFieldErr('missing_name', true); ok = false; }
+    const d = digitsPhone(phone.value);
+    if (d.length !== 11) { showFieldErr('reporter_phone', true); ok = false; }
+    return ok;
+  }
+
+  function humanError(raw, status) {
+    if (!raw && status === 429) return ERR_MAP['Too many requests'];
+    if (!raw) return 'Не удалось отправить. Проверьте интернет и попробуйте ещё раз';
+    if (ERR_MAP[raw]) return ERR_MAP[raw];
+    // flask/gettext sometimes returns Russian already
+    if (/[А-Яа-яЁё]/.test(raw)) return raw;
+    return 'Сервер отклонил заявку: ' + raw;
+  }
+
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    msg.innerHTML = '';
+    if (!validate()) {
+      msg.innerHTML = '<div class="err">Исправьте поля, отмеченные красным</div>';
+      return;
+    }
+    const fd = new FormData(f);
+    const body = Object.fromEntries(fd.entries());
+    body.missing_name = body.missing_name.trim();
+    body.reporter_phone = formatPhone(body.reporter_phone);
+    if (body.last_seen_at) {
+      const dt = new Date(body.last_seen_at);
+      if (!Number.isNaN(dt.getTime())) body.last_seen_at = dt.toISOString();
+      else delete body.last_seen_at;
+    } else delete body.last_seen_at;
+    if (body.lkp_lat) body.lkp_lat = parseFloat(body.lkp_lat);
+    else delete body.lkp_lat;
+    if (body.lkp_lon) body.lkp_lon = parseFloat(body.lkp_lon);
+    else delete body.lkp_lon;
+
+    go.disabled = true;
+    try {
+      const r = await fetch('/api/crm/public/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.success) throw Object.assign(new Error(humanError(j.error, r.status)), { status: r.status });
+      msg.innerHTML = `<div class="ok">Принято. Номер обращения: <strong>${j.case_number}</strong>. Сохраните его — штаб может перезвонить.</div>`;
+      f.reset();
+      clearPin();
+      showFieldErr('missing_name', false);
+      showFieldErr('reporter_phone', false);
+    } catch (err) {
+      msg.innerHTML = `<div class="err">${err.message || humanError('', err.status)}</div>`;
+    } finally {
+      go.disabled = false;
+    }
+  };
+})();
 </script>
 </body>
 </html>
